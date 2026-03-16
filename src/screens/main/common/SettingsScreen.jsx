@@ -1,0 +1,210 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Switch,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Header from '../../../components/layout/Header';
+import Card from '../../../components/ui/Card';
+import { colors, typography, spacing, borderRadius } from '../../../styles/theme';
+import { useAuth } from '../../../constants/AuthContext';
+import { useTheme } from '../../../constants/ThemeContext';
+
+const SettingsScreen = ({ navigation }) => {
+  const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const [notifications, setNotifications] = useState(true);
+  const [biometric, setBiometric] = useState(false);
+
+  const SettingItem = ({ icon, label, value, onValueChange, type = 'switch' }) => (
+    <View style={styles.settingItem}>
+      <View style={styles.settingLeft}>
+        <Icon name={icon} size={24} color={colors.primary[500]} />
+        <Text style={styles.settingLabel}>{label}</Text>
+      </View>
+      {type === 'switch' ? (
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{ false: colors.gray[300], true: colors.primary[500] }}
+          thumbColor={colors.white}
+        />
+      ) : (
+        <TouchableOpacity onPress={onValueChange}>
+          <Icon name="chevron-right" size={24} color={colors.gray[400]} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            navigation.replace('Login');
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Header title="Settings" showBack />
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Appearance */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <SettingItem
+            icon="theme-light-dark"
+            label="Dark Mode"
+            value={isDark}
+            onValueChange={toggleTheme}
+          />
+        </Card>
+
+        {/* Notifications */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <SettingItem
+            icon="bell"
+            label="Push Notifications"
+            value={notifications}
+            onValueChange={setNotifications}
+          />
+          <SettingItem
+            icon="email"
+            label="Email Alerts"
+            value={notifications}
+            onValueChange={setNotifications}
+          />
+        </Card>
+
+        {/* Security */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Security</Text>
+          <SettingItem
+            icon="fingerprint"
+            label="Biometric Login"
+            value={biometric}
+            onValueChange={setBiometric}
+          />
+          <SettingItem
+            icon="lock"
+            label="Change Password"
+            type="link"
+            onValueChange={() => Alert.alert('Coming Soon', 'Password change coming soon!')}
+          />
+        </Card>
+
+        {/* About */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>About</Text>
+          <SettingItem
+            icon="information"
+            label="App Version"
+            type="link"
+            value="1.0.0"
+            onValueChange={() => Alert.alert('Version', 'TaxVault App v1.0.0')}
+          />
+          <SettingItem
+            icon="file-document"
+            label="Terms & Conditions"
+            type="link"
+            onValueChange={() => Alert.alert('Terms', 'Terms and conditions coming soon!')}
+          />
+          <SettingItem
+            icon="shield"
+            label="Privacy Policy"
+            type="link"
+            onValueChange={() => Alert.alert('Privacy', 'Privacy policy coming soon!')}
+          />
+        </Card>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Icon name="logout" size={24} color={colors.error} />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.version}>Version 1.0.0</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    padding: spacing.lg,
+  },
+  section: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  sectionTitle: {
+    ...typography.h6,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingLabel: {
+    ...typography.body,
+    color: colors.text.primary,
+    marginLeft: spacing.md,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.error + '10',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  logoutText: {
+    ...typography.body,
+    color: colors.error,
+    fontWeight: typography.weights.medium,
+    marginLeft: spacing.sm,
+  },
+  version: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+});
+
+export default SettingsScreen;
