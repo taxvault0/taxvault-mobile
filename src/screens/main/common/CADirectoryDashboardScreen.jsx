@@ -9,14 +9,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Header from '../../components/layout/Header';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import { colors } from '../../styles/colors';
-import { typography } from '../../styles/typography';
-import { spacing } from '../../styles/spacing';
-import api from '../../services/api';
+import Header from '@/components/layout/AppHeader';
+import Card from '@/components/ui/AppCard';
+import Button from '@/components/ui/AppButton';
+import Badge from '@/components/ui/Badge';
+import { colors } from '@/styles/theme';
+import { typography } from '@/styles/theme';
+import { spacing } from '@/styles/theme';
+import api from '@/services/api';
 
 const CADirectoryDashboardScreen = () => {
   const [acceptingClients, setAcceptingClients] = useState(true);
@@ -246,3 +246,4 @@ const CADirectoryDashboardScreen = () => {
 };
 
 export default CADirectoryDashboardScreen;
+

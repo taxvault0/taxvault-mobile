@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { mileageAPI } from '../services/api';
+import { mileageAPI } from '@/services/api';
 import { useAuth } from './AuthContext';
 
 const LOCATION_TASK_NAME = 'background-location-task';
@@ -161,3 +161,4 @@ export const MileageProvider = ({ children }) => {
     </MileageContext.Provider>
   );
 };
+

@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors, typography, spacing, borderRadius } from '../../../styles/theme';
-import Button from '../ui/Button';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
+import Button from '@/components/ui/AppButton';
 
 const DatePicker = ({
   label,
@@ -203,5 +203,6 @@ const styles = StyleSheet.create({
 });
 
 export default DatePicker;
+
 
 

@@ -75,3 +75,4 @@ const categorizeReceipt = (text) => {
   // Logic to categorize based on keywords
   return 'other';
 };
+

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile-app-new",
-    "slug": "mobile-app-new",
+    "name": "Tax-Vault",
+    "slug": "Tax-Vault",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

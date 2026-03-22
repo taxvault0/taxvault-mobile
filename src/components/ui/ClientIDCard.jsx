@@ -13,9 +13,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as Clipboard from 'expo-clipboard';
 import Card from './Card';
 import Button from './Button';
-import { colors } from '../../styles/colors';
-import { typography } from '../../styles/typography';
-import { spacing } from '../../styles/spacing';
+import { colors } from '@/styles/theme';
+import { typography } from '@/styles/theme';
+import { spacing } from '@/styles/theme';
 
 const ClientIDCard = ({ clientId, userName, showQR = true }) => {
   const [copied, setCopied] = useState(false);
@@ -205,3 +205,4 @@ const styles = StyleSheet.create({
 });
 
 export default ClientIDCard;
+

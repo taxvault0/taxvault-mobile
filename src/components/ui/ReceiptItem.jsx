@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors } from '../../styles/colors';
-import { typography } from '../../styles/typography';
-import { spacing } from '../../styles/spacing';
+import { colors } from '@/styles/theme';
+import { typography } from '@/styles/theme';
+import { spacing } from '@/styles/theme';
 import Badge from './Badge';
 
 const ReceiptItem = ({ receipt, onPress }) => {
@@ -82,3 +82,4 @@ const ReceiptItem = ({ receipt, onPress }) => {
 };
 
 export default ReceiptItem;
+

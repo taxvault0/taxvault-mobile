@@ -106,3 +106,4 @@ export const SUBSCRIPTION_PLANS = [
     ],
   },
 ];
+

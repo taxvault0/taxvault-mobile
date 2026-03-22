@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../constants/config';
+import { API_URL } from '@/constants/config';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -144,3 +144,4 @@ export const caAPI = {
 };
 
 export default api;
+

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../../../styles/theme';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 
 const RadioButton = ({
   label,
@@ -120,5 +120,6 @@ const styles = StyleSheet.create({
 });
 
 export default RadioButton;
+
 
 

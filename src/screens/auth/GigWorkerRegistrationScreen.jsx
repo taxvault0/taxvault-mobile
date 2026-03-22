@@ -10,12 +10,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Header from '../../components/layout/Header';
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import { colors } from '../../styles/colors';
-import { typography } from '../../styles/typography';
-import { spacing } from '../../styles/spacing';
+import Header from '@/components/layout/AppHeader';
+import Button from '@/components/ui/AppButton';
+import Card from '@/components/ui/AppCard';
+import { colors } from '@/styles/theme';
+import { typography } from '@/styles/theme';
+import { spacing } from '@/styles/theme';
 
 const GigWorkerRegisterScreen = () => {
   const navigation = useNavigation();
@@ -872,3 +872,4 @@ const GigWorkerRegisterScreen = () => {
 };
 
 export default GigWorkerRegisterScreen;
+

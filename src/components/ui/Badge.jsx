@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import { theme } from '@/styles/theme';
 
 const Badge = ({ status, text }) => {
   const getStatusStyles = () => {
@@ -79,3 +79,4 @@ const Badge = ({ status, text }) => {
 };
 
 export default Badge;
+

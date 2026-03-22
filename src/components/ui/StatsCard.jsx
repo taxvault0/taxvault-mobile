@@ -3,9 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Card from './Card';
-import { colors } from '../../styles/colors';
-import { typography } from '../../styles/typography';
-import { spacing } from '../../styles/spacing';
+import { colors } from '@/styles/theme';
+import { typography } from '@/styles/theme';
+import { spacing } from '@/styles/theme';
 
 const StatsCard = ({
   title,
@@ -111,3 +111,4 @@ const StatsCard = ({
 };
 
 export default StatsCard;
+

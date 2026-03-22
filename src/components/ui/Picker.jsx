@@ -9,7 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors, typography, spacing, borderRadius } from '../../../styles/theme';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 import Button from './Button';
 import Input from './Input';
 
@@ -236,5 +236,6 @@ const styles = StyleSheet.create({
 });
 
 export default Picker;
+
 
 

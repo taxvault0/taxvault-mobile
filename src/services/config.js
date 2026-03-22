@@ -24,3 +24,4 @@ const getEnvVars = () => {
 };
 
 export const { API_URL } = getEnvVars();
+

@@ -183,3 +183,4 @@ export const formatBusinessNumber = (bn, province) => {
   // Simple formatting - in real app, validate pattern
   return bn;
 };
+

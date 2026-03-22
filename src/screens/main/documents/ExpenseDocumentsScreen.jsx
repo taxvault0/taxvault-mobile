@@ -9,12 +9,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Header from '../../../components/layout/Header';
-import Card from '../../../components/ui/Card';
-import Button from '../../../components/ui/Button';
-import Badge from '../../../components/ui/Badge';
-import { colors, typography, spacing, borderRadius } from '../../../styles/theme';
-import { useSingleDocumentPicker } from '../../../hooks/useDocumentPicker';
+import Header from '@/components/layout/AppHeader';
+import Card from '@/components/ui/AppCard';
+import Button from '@/components/ui/AppButton';
+import Badge from '@/components/ui/Badge';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
+import { useSingleDocumentPicker } from '@/hooks/useDocumentPicker';
 
 const ExpenseDocumentsScreen = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -351,6 +351,7 @@ const styles = StyleSheet.create({
 });
 
 export default ExpenseDocumentsScreen;
+
 
 
 

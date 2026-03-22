@@ -1,10 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Button from './Button';
-import { colors } from '../../styles/colors';
-import { typography } from '../../styles/typography';
-import { spacing } from '../../styles/spacing';
+import AppButton from '@/components/ui/AppButton';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 
 const EmptyState = ({
   icon,
@@ -26,45 +24,47 @@ const EmptyState = ({
         style={{
           width: 80,
           height: 80,
-          borderRadius: spacing.radius.xl,
+          borderRadius: borderRadius.xl,
           backgroundColor: colors.gray[100],
           justifyContent: 'center',
           alignItems: 'center',
           marginBottom: spacing.lg,
         }}
       >
-        <Icon name={icon || 'file-document-outline'} size={40} color={colors.gray[400]} />
+        <Icon
+          name={icon || 'file-document-outline'}
+          size={40}
+          color={colors.gray[400]}
+        />
       </View>
 
       <Text
-        style={[
-          typography.styles.h5,
-          {
-            textAlign: 'center',
-            marginBottom: spacing.sm,
-          },
-        ]}
+        style={{
+          fontSize: typography.sizes?.xl || 20,
+          fontWeight: typography.weights?.semibold || '600',
+          color: colors.gray[900],
+          textAlign: 'center',
+          marginBottom: spacing.sm,
+        }}
       >
         {title || 'Nothing here yet'}
       </Text>
 
       <Text
-        style={[
-          typography.styles.body2,
-          {
-            color: colors.text.secondary,
-            textAlign: 'center',
-            marginBottom: spacing.lg,
-          },
-        ]}
+        style={{
+          fontSize: typography.sizes?.base || 16,
+          color: colors.gray[600],
+          textAlign: 'center',
+          marginBottom: spacing.lg,
+        }}
       >
         {message || 'Get started by adding your first item'}
       </Text>
 
       {buttonText && onButtonPress && (
-        <Button onPress={onButtonPress} icon={<Icon name="plus" size={20} color={colors.white} />}>
+        <AppButton onPress={onButtonPress}>
           {buttonText}
-        </Button>
+        </AppButton>
       )}
     </View>
   );
