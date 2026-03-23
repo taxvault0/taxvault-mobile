@@ -1,82 +1,35 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { theme } from '@/styles/theme';
 
-const Badge = ({ status, text }) => {
-  const getStatusStyles = () => {
-    switch (status) {
-      case 'verified':
-      case 'success':
-      case 'business':
-        return theme.components.badge.success;
-      case 'pending':
-      case 'warning':
-      case 'commute':
-        return theme.components.badge.warning;
-      case 'active':
-      case 'info':
-        return theme.components.badge.info;
-      case 'gold':
-      case 'premium':
-        return theme.components.badge.gold;
-      default:
-        return theme.components.badge.info;
-    }
-  };
+const BADGE_VARIANTS = {
+  verified: { container: 'success', text: 'successText', label: 'Verified' },
+  success: { container: 'success', text: 'successText', label: 'Success' },
+  business: { container: 'success', text: 'successText', label: 'Business' },
 
-  const getStatusText = () => {
-    if (text) return text;
-    
-    switch (status) {
-      case 'verified':
-        return 'Verified';
-      case 'pending':
-        return 'Pending';
-      case 'business':
-        return 'Business';
-      case 'commute':
-        return 'Commute';
-      case 'personal':
-        return 'Personal';
-      case 'active':
-        return 'Active';
-      case 'gold':
-        return 'Premium';
-      default:
-        return status;
-    }
-  };
+  pending: { container: 'warning', text: 'warningText', label: 'Pending' },
+  warning: { container: 'warning', text: 'warningText', label: 'Warning' },
+  commute: { container: 'warning', text: 'warningText', label: 'Commute' },
 
-  const getTextStyles = () => {
-    switch (status) {
-      case 'verified':
-      case 'success':
-      case 'business':
-        return theme.components.badge.successText;
-      case 'pending':
-      case 'warning':
-      case 'commute':
-        return theme.components.badge.warningText;
-      case 'active':
-      case 'info':
-        return theme.components.badge.infoText;
-      case 'gold':
-      case 'premium':
-        return theme.components.badge.goldText;
-      default:
-        return theme.components.badge.infoText;
-    }
-  };
+  active: { container: 'info', text: 'infoText', label: 'Active' },
+  info: { container: 'info', text: 'infoText', label: 'Info' },
+  personal: { container: 'info', text: 'infoText', label: 'Personal' },
 
-  const statusStyles = getStatusStyles();
-  const textStyles = getTextStyles();
+  gold: { container: 'gold', text: 'goldText', label: 'Premium' },
+  premium: { container: 'gold', text: 'goldText', label: 'Premium' },
+};
+
+const Badge = ({ status = 'info', text }) => {
+  const variant = BADGE_VARIANTS[status] || BADGE_VARIANTS.info;
+
+  const containerStyle = theme?.components?.badge?.[variant.container] || {};
+  const textStyle = theme?.components?.badge?.[variant.text] || {};
 
   return (
-    <View style={statusStyles}>
-      <Text style={textStyles}>{getStatusText()}</Text>
+    <View style={containerStyle}>
+      <Text style={textStyle}>{text || variant.label || status}</Text>
     </View>
   );
 };
 
 export default Badge;
-

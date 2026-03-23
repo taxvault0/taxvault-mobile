@@ -10,7 +10,7 @@ import { Camera, CameraView } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Header from '@/components/layout/AppHeader';
-import Button from '@/components/ui/AppButton';
+import Button from '@/components/ui/Button';
 import { colors } from '@/styles/theme';
 import { typography } from '@/styles/theme';
 import { spacing } from '@/styles/theme';

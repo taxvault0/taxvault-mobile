@@ -9,8 +9,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Header from '@/components/layout/AppHeader';
-import Card from '@/components/ui/AppCard';
-import Button from '@/components/ui/AppButton';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 import { useSingleDocumentPicker } from '@/hooks/useDocumentPicker';

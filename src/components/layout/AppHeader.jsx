@@ -47,7 +47,7 @@ const Header = ({
             </TouchableOpacity>
           )}
           {showProfile && !rightIcon && (
-            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+            <TouchableOpacity onPress={() => navigation.navigate('ProfileScreenCA')}>
               <View
                 style={{
                   width: 36,

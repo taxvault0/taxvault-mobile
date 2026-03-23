@@ -86,7 +86,7 @@ const DashboardScreen = ({ navigation }) => {
           <Text style={styles.greeting}>Welcome back,</Text>
           <Text style={styles.userName}>{user?.name || 'User'}</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity onPress={() => navigation.navigate('ProfileScreenCA')}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
           </View>
@@ -143,7 +143,7 @@ const DashboardScreen = ({ navigation }) => {
         <QuickAction
           icon="account-plus"
           label="Invite CA"
-          onPress={() => navigation.navigate('Profile', { tab: 'ca' })}
+          onPress={() => navigation.navigate('ProfileScreenCA')}
           color={colors.gold}
         />
       </View>

@@ -9,10 +9,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Header from '@/components/layout/AppHeader';
-import Card from '@/components/ui/AppCard';
+import Card from '@/components/ui/Card';
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 
-const CADashboardScreen = ({ navigation }) => {
+const DashboardScreenCA = ({ navigation }) => {
   const quickActions = [
     {
       id: 'clients',
@@ -257,5 +257,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CADashboardScreen;
+export default DashboardScreenCA;
 

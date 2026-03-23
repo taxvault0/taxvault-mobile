@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import Header from '@/components/layout/AppHeader';
-import Card from '@/components/ui/AppCard';
+import Card from '@/components/ui/Card';
 
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useTheme } from '@/app/providers/ThemeContext';

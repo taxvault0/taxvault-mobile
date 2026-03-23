@@ -14,8 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import Header from '@/components/layout/AppHeader';
-import Button from '@/components/ui/AppButton';
-import Card from '@/components/ui/AppCard';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 
 const T2125FormScreen = () => {

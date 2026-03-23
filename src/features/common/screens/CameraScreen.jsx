@@ -30,9 +30,9 @@ import Slider from '@react-native-community/slider';
    
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
    
-import Button from '@/components/ui/AppButton';
+import Button from '@/components/ui/Button';
    
-import Card from '@/components/ui/AppCard';
+import Card from '@/components/ui/Card';
    
 import { createReceipt, uploadReceiptImage } from '@/services/receiptAPI';
    

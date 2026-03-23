@@ -11,7 +11,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
-import Button from '@/components/ui/AppButton';
+import Button from '@/components/ui/Button';
 
 const DatePicker = ({
   label,

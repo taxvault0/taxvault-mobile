@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,54 +6,64 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Header from '@/components/layout/AppHeader';
-import Button from '@/components/ui/AppButton';
-import Card from '@/components/ui/AppCard';
-import { colors } from '@/styles/theme';
-import { typography } from '@/styles/theme';
-import { spacing, borderRadius } from '@/styles/theme';
-import { PROVINCES, TAX_RATES, getTaxAgency } from '@/utils/taxUtils';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
+import { PROVINCES, TAX_RATES } from '@/utils/taxUtils';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
-const RegisterScreen = ({ navigation }) => {
+const RegisterScreen = ({ navigation, route }) => {
+  const selectedUserType = route?.params?.userType || 'user';
+  const isCA = selectedUserType === 'ca';
+  const { login } = useAuth();
+
+  const defaultFormUserType = isCA ? 'ca' : 'individual';
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Account Info
     firstName: '',
     lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: '',
-    
-    // Location
     province: 'ON',
     city: '',
     postalCode: '',
-    
-    // Business Info
-    userType: 'individual', // individual, gig-worker, shop-owner, ca
+    userType: defaultFormUserType,
     businessName: '',
     businessNumber: '',
-    
-    // Tax Info
     gstRegistered: false,
-    hasBusinessNumber: false,
+    hasBusinessNumber: isCA,
   });
 
   const [selectedProvinceInfo, setSelectedProvinceInfo] = useState(
-    PROVINCES.find(p => p.code === 'ON')
+    PROVINCES.find((p) => p.code === 'ON')
+  );
+
+  const title = useMemo(
+    () => (isCA ? 'Create CA Account' : 'Create Individual Account'),
+    [isCA]
+  );
+
+  const subtitle = useMemo(
+    () =>
+      isCA
+        ? 'Set up your tax professional account.'
+        : 'Set up your individual TaxVault account.',
+    [isCA]
   );
 
   const handleProvinceChange = (provinceCode) => {
     setFormData({ ...formData, province: provinceCode });
-    const provinceInfo = PROVINCES.find(p => p.code === provinceCode);
+    const provinceInfo = PROVINCES.find((p) => p.code === provinceCode);
     setSelectedProvinceInfo(provinceInfo);
-    
-    // Update business number format based on province
+
     if (formData.hasBusinessNumber) {
       const prefix = provinceCode === 'QC' ? 'RQ' : 'RT';
       Alert.alert(
@@ -66,7 +76,7 @@ const RegisterScreen = ({ navigation }) => {
   const getProvinceTaxInfo = (provinceCode) => {
     const rates = TAX_RATES.provincial[provinceCode];
     if (!rates) return 'GST only (5%)';
-    
+
     switch (rates.type) {
       case 'HST':
         return `HST ${(rates.rate * 100).toFixed(0)}% (includes GST)`;
@@ -79,27 +89,65 @@ const RegisterScreen = ({ navigation }) => {
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
-      <Header title="Create Account" showBack />
+  const handleCreateAccount = async () => {
+    if (formData.password !== formData.confirmPassword) {
+      Alert.alert('Password mismatch', 'Passwords do not match.');
+      return;
+    }
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-        {/* Progress Indicator */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: spacing.lg }}>
+    const authenticatedUser = {
+      name: `${formData.firstName} ${formData.lastName}`.trim(),
+      email: formData.email.trim().toLowerCase(),
+      role: selectedUserType,
+      userType: selectedUserType,
+      province: formData.province,
+    };
+
+    if (typeof login === 'function') {
+      try {
+        await login(authenticatedUser);
+        return;
+      } catch (error) {
+        console.log('Register error', error);
+      }
+    }
+
+    Alert.alert('Success', 'Account created successfully');
+    navigation.navigate('Login', { userType: selectedUserType });
+  };
+
+  const renderUserTypeSummary = () => (
+    <View style={styles.roleSummary}>
+      <Icon
+        name={isCA ? 'account-tie' : 'account'}
+        size={18}
+        color={colors.primary[500]}
+      />
+      <Text style={styles.roleSummaryText}>
+        {isCA ? 'Registering as Tax Professional (CA)' : 'Registering as Individual User'}
+      </Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerBlock}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+          {renderUserTypeSummary()}
+        </View>
+
+        <View style={styles.progressRow}>
           {[1, 2, 3].map((s) => (
             <View
               key={s}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                backgroundColor: step >= s ? colors.primary[500] : colors.gray[300],
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginHorizontal: spacing.xs,
-              }}
+              style={[
+                styles.progressDot,
+                step >= s && styles.progressDotActive,
+              ]}
             >
-              <Text style={{ color: colors.white, fontWeight: 'bold' }}>{s}</Text>
+              <Text style={styles.progressText}>{s}</Text>
             </View>
           ))}
         </View>
@@ -107,123 +155,82 @@ const RegisterScreen = ({ navigation }) => {
         {step === 1 && (
           <Card>
             <Card.Body>
-              <Text style={[typography.styles.h5, { marginBottom: spacing.lg }]}>
-                Personal Information
-              </Text>
+              <Text style={styles.sectionTitle}>Personal Information</Text>
 
-              {/* Name Fields */}
-              <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                    First Name
-                  </Text>
+              <View style={styles.twoCol}>
+                <View style={styles.flexOne}>
+                  <Text style={styles.label}>First Name</Text>
                   <TextInput
-                    style={{
-                      borderWidth: 1,
-                      borderColor: colors.gray[300],
-                      borderRadius: borderRadius.md,
-                      padding: spacing.md,
-                      marginTop: spacing.xs,
-                    }}
+                    style={styles.input}
                     value={formData.firstName}
-                    onChangeText={(text) => setFormData({ ...formData, firstName: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, firstName: text })
+                    }
                     placeholder="John"
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                    Last Name
-                  </Text>
+
+                <View style={styles.flexOne}>
+                  <Text style={styles.label}>Last Name</Text>
                   <TextInput
-                    style={{
-                      borderWidth: 1,
-                      borderColor: colors.gray[300],
-                      borderRadius: borderRadius.md,
-                      padding: spacing.md,
-                      marginTop: spacing.xs,
-                    }}
+                    style={styles.input}
                     value={formData.lastName}
-                    onChangeText={(text) => setFormData({ ...formData, lastName: text })}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, lastName: text })
+                    }
                     placeholder="Doe"
                   />
                 </View>
               </View>
 
-              {/* Email */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  Email Address
-                </Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>Email Address</Text>
                 <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.gray[300],
-                    borderRadius: borderRadius.md,
-                    padding: spacing.md,
-                    marginTop: spacing.xs,
-                  }}
+                  style={styles.input}
                   value={formData.email}
-                  onChangeText={(text) => setFormData({ ...formData, email: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, email: text })
+                  }
                   keyboardType="email-address"
+                  autoCapitalize="none"
                   placeholder="john@example.com"
                 />
               </View>
 
-              {/* Phone */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  Phone Number
-                </Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>Phone Number</Text>
                 <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.gray[300],
-                    borderRadius: borderRadius.md,
-                    padding: spacing.md,
-                    marginTop: spacing.xs,
-                  }}
+                  style={styles.input}
                   value={formData.phone}
-                  onChangeText={(text) => setFormData({ ...formData, phone: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, phone: text })
+                  }
                   keyboardType="phone-pad"
                   placeholder="(416) 555-0123"
                 />
               </View>
 
-              {/* Password */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  Password
-                </Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>Password</Text>
                 <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.gray[300],
-                    borderRadius: borderRadius.md,
-                    padding: spacing.md,
-                    marginTop: spacing.xs,
-                  }}
+                  style={styles.input}
                   value={formData.password}
-                  onChangeText={(text) => setFormData({ ...formData, password: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, password: text })
+                  }
                   secureTextEntry
                   placeholder="********"
                 />
               </View>
 
-              {/* Confirm Password */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  Confirm Password
-                </Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>Confirm Password</Text>
                 <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.gray[300],
-                    borderRadius: borderRadius.md,
-                    padding: spacing.md,
-                    marginTop: spacing.xs,
-                  }}
+                  style={styles.input}
                   value={formData.confirmPassword}
-                  onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, confirmPassword: text })
+                  }
                   secureTextEntry
                   placeholder="********"
                 />
@@ -235,170 +242,139 @@ const RegisterScreen = ({ navigation }) => {
         {step === 2 && (
           <Card>
             <Card.Body>
-              <Text style={[typography.styles.h5, { marginBottom: spacing.lg }]}>
-                Location & Tax Information
-              </Text>
+              <Text style={styles.sectionTitle}>Location & Tax Information</Text>
 
-              {/* Province Selection - CRITICAL */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  Province/Territory <Text style={{ color: colors.warning }}>*</Text>
-                </Text>
-                <View style={{
-                  borderWidth: 1,
-                  borderColor: colors.gray[300],
-                  borderRadius: borderRadius.md,
-                  marginTop: spacing.xs,
-                }}>
+              <View style={styles.field}>
+                <Text style={styles.label}>Province/Territory</Text>
+                <View style={styles.pickerWrap}>
                   <Picker
                     selectedValue={formData.province}
                     onValueChange={handleProvinceChange}
                     style={{ height: 50 }}
                   >
-                    {PROVINCES.map(prov => (
-                      <Picker.Item key={prov.code} label={prov.name} value={prov.code} />
+                    {PROVINCES.map((prov) => (
+                      <Picker.Item
+                        key={prov.code}
+                        label={prov.name}
+                        value={prov.code}
+                      />
                     ))}
                   </Picker>
                 </View>
               </View>
 
-              {/* Province Tax Information Card */}
-              <Card style={{ 
-                backgroundColor: colors.primary[50], 
-                marginBottom: spacing.md,
-                borderWidth: 1,
-                borderColor: colors.primary[200],
-              }}>
+              <Card
+                style={{
+                  backgroundColor: colors.primary[50],
+                  marginBottom: spacing.md,
+                  borderWidth: 1,
+                  borderColor: colors.primary[200],
+                }}
+              >
                 <Card.Body>
-                  <Text style={[typography.styles.body2, { fontWeight: 'bold', marginBottom: spacing.xs }]}>
+                  <Text style={styles.infoTitle}>
                     Tax Information for {selectedProvinceInfo?.name}
                   </Text>
-                  <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
+                  <Text style={styles.infoText}>
                     Tax Type: {selectedProvinceInfo?.type}
                   </Text>
-                  <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
+                  <Text style={styles.infoText}>
                     Rate: {getProvinceTaxInfo(formData.province)}
                   </Text>
-                  <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
+                  <Text style={styles.infoText}>
                     Tax Agency: {selectedProvinceInfo?.taxAgency}
                   </Text>
                   {formData.province === 'QC' && (
-                    <View style={{ 
-                      marginTop: spacing.sm, 
-                      padding: spacing.xs, 
-                      backgroundColor: colors.info + '20',
-                      borderRadius: borderRadius.sm,
-                    }}>
-                      <Text style={[typography.styles.caption, { color: colors.info }]}>
-                        ⚠️ Quebec residents must file with both CRA and Revenu Québec
+                    <View style={styles.qcNotice}>
+                      <Text style={styles.qcNoticeText}>
+                        Quebec residents must file with both CRA and Revenu Québec
                       </Text>
                     </View>
                   )}
                 </Card.Body>
               </Card>
 
-              {/* City */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  City
-                </Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>City</Text>
                 <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.gray[300],
-                    borderRadius: borderRadius.md,
-                    padding: spacing.md,
-                    marginTop: spacing.xs,
-                  }}
+                  style={styles.input}
                   value={formData.city}
-                  onChangeText={(text) => setFormData({ ...formData, city: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, city: text })
+                  }
                   placeholder="Toronto"
                 />
               </View>
 
-              {/* Postal Code */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  Postal Code
-                </Text>
+              <View style={styles.field}>
+                <Text style={styles.label}>Postal Code</Text>
                 <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.gray[300],
-                    borderRadius: borderRadius.md,
-                    padding: spacing.md,
-                    marginTop: spacing.xs,
-                  }}
+                  style={styles.input}
                   value={formData.postalCode}
-                  onChangeText={(text) => setFormData({ ...formData, postalCode: text })}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, postalCode: text })
+                  }
                   placeholder="M5V 2H1"
                 />
               </View>
 
-              {/* User Type */}
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                  I am a...
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs }}>
-                  {['individual', 'gig-worker', 'shop-owner', 'ca'].map(type => (
-                    <TouchableOpacity
-                      key={type}
-                      style={{
-                        paddingHorizontal: spacing.md,
-                        paddingVertical: spacing.sm,
-                        borderRadius: borderRadius.full,
-                        backgroundColor: formData.userType === type ? colors.primary[500] : colors.gray[100],
-                      }}
-                      onPress={() => setFormData({ ...formData, userType: type })}
-                    >
-                      <Text style={{
-                        color: formData.userType === type ? colors.white : colors.text.secondary,
-                        textTransform: 'capitalize',
-                      }}>
-                        {type.replace('-', ' ')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Business Number (for businesses) */}
-              {['shop-owner', 'ca'].includes(formData.userType) && (
+              {isCA && (
                 <>
+                  <View style={styles.field}>
+                    <Text style={styles.label}>Business Name</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.businessName}
+                      onChangeText={(text) =>
+                        setFormData({ ...formData, businessName: text })
+                      }
+                      placeholder="Your firm or practice name"
+                    />
+                  </View>
+
                   <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
-                    onPress={() => setFormData({ ...formData, hasBusinessNumber: !formData.hasBusinessNumber })}
+                    style={styles.checkboxRow}
+                    onPress={() =>
+                      setFormData({
+                        ...formData,
+                        hasBusinessNumber: !formData.hasBusinessNumber,
+                      })
+                    }
                   >
                     <Icon
-                      name={formData.hasBusinessNumber ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                      name={
+                        formData.hasBusinessNumber
+                          ? 'checkbox-marked'
+                          : 'checkbox-blank-outline'
+                      }
                       size={24}
                       color={colors.primary[500]}
                     />
-                    <Text style={[typography.styles.body2, { marginLeft: spacing.sm }]}>
+                    <Text style={styles.checkboxText}>
                       I have a Business Number (BN)
                     </Text>
                   </TouchableOpacity>
 
                   {formData.hasBusinessNumber && (
-                    <View style={{ marginBottom: spacing.md }}>
-                      <Text style={[typography.styles.caption, { color: colors.text.secondary }]}>
-                        Business Number
-                      </Text>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>Business Number</Text>
                       <TextInput
-                        style={{
-                          borderWidth: 1,
-                          borderColor: colors.gray[300],
-                          borderRadius: borderRadius.md,
-                            padding: spacing.md,
-                          marginTop: spacing.xs,
-                        }}
+                        style={styles.input}
                         value={formData.businessNumber}
-                        onChangeText={(text) => setFormData({ ...formData, businessNumber: text })}
-                        placeholder={formData.province === 'QC' ? '123456789RQ0001' : '123456789RT0001'}
+                        onChangeText={(text) =>
+                          setFormData({ ...formData, businessNumber: text })
+                        }
+                        placeholder={
+                          formData.province === 'QC'
+                            ? '123456789RQ0001'
+                            : '123456789RT0001'
+                        }
                       />
-                      <Text style={[typography.styles.caption, { color: colors.gray[400], marginTop: 4 }]}>
-                        Format: {formData.province === 'QC' ? '9 digits + RQ + 4 digits' : '9 digits + RT + 4 digits'}
+                      <Text style={styles.helperText}>
+                        Format:{' '}
+                        {formData.province === 'QC'
+                          ? '9 digits + RQ + 4 digits'
+                          : '9 digits + RT + 4 digits'}
                       </Text>
                     </View>
                   )}
@@ -411,37 +387,54 @@ const RegisterScreen = ({ navigation }) => {
         {step === 3 && (
           <Card>
             <Card.Body>
-              <Text style={[typography.styles.h5, { marginBottom: spacing.lg }]}>
-                Review & Confirm
-              </Text>
+              <Text style={styles.sectionTitle}>Review & Confirm</Text>
 
-              <Card style={{ backgroundColor: colors.primary[50], marginBottom: spacing.md }}>
+              <Card
+                style={{ backgroundColor: colors.primary[50], marginBottom: spacing.md }}
+              >
                 <Card.Body>
-                  <Text style={[typography.styles.body2, { fontWeight: 'bold' }]}>Account Summary</Text>
-                  <Text>{formData.firstName} {formData.lastName}</Text>
-                  <Text>{formData.email}</Text>
-                  <Text>{formData.phone}</Text>
+                  <Text style={styles.infoTitle}>Account Summary</Text>
+                  <Text style={styles.infoText}>
+                    {formData.firstName} {formData.lastName}
+                  </Text>
+                  <Text style={styles.infoText}>{formData.email}</Text>
+                  <Text style={styles.infoText}>{formData.phone}</Text>
+                  <Text style={styles.infoText}>
+                    Account Type: {isCA ? 'Tax Professional (CA)' : 'Individual User'}
+                  </Text>
                 </Card.Body>
               </Card>
 
-              <Card style={{ backgroundColor: colors.primary[50], marginBottom: spacing.md }}>
+              <Card
+                style={{ backgroundColor: colors.primary[50], marginBottom: spacing.md }}
+              >
                 <Card.Body>
-                  <Text style={[typography.styles.body2, { fontWeight: 'bold' }]}>Location & Tax</Text>
-                  <Text>Province: {PROVINCES.find(p => p.code === formData.province)?.name}</Text>
-                  <Text>Tax System: {getProvinceTaxInfo(formData.province)}</Text>
-                  <Text>Agency: {PROVINCES.find(p => p.code === formData.province)?.taxAgency}</Text>
-                  {formData.businessNumber && <Text>BN: {formData.businessNumber}</Text>}
+                  <Text style={styles.infoTitle}>Location & Tax</Text>
+                  <Text style={styles.infoText}>
+                    Province: {PROVINCES.find((p) => p.code === formData.province)?.name}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    Tax System: {getProvinceTaxInfo(formData.province)}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    Agency: {PROVINCES.find((p) => p.code === formData.province)?.taxAgency}
+                  </Text>
+                  {!!formData.businessNumber && (
+                    <Text style={styles.infoText}>BN: {formData.businessNumber}</Text>
+                  )}
                 </Card.Body>
               </Card>
 
-              {/* Quebec-specific warning */}
               {formData.province === 'QC' && (
-                <Card style={{ backgroundColor: colors.warning.light, marginBottom: spacing.md }}>
+                <Card
+                  style={{ backgroundColor: colors.warning.light, marginBottom: spacing.md }}
+                >
                   <Card.Body>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={styles.warningRow}>
                       <Icon name="alert" size={24} color={colors.warning} />
-                      <Text style={[typography.styles.body2, { color: colors.warning, marginLeft: spacing.sm, flex: 1 }]}>
-                        As a Quebec resident, you'll need to file with both CRA and Revenu Québec. Your business number will start with RQ.
+                      <Text style={styles.warningText}>
+                        As a Quebec resident, you'll need to file with both CRA and
+                        Revenu Québec.
                       </Text>
                     </View>
                   </Card.Body>
@@ -451,8 +444,7 @@ const RegisterScreen = ({ navigation }) => {
           </Card>
         )}
 
-        {/* Navigation Buttons */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg }}>
+        <View style={styles.navButtons}>
           {step > 1 && (
             <Button
               variant="outline"
@@ -462,33 +454,222 @@ const RegisterScreen = ({ navigation }) => {
               Back
             </Button>
           )}
-          
+
           {step < 3 ? (
             <Button
               variant="primary"
               onPress={() => setStep(step + 1)}
-              style={{ flex: step > 1 ? 1 : 1 }}
+              style={{ flex: 1 }}
             >
               Next
             </Button>
           ) : (
             <Button
               variant="primary"
-              onPress={() => {
-                // Submit registration
-                Alert.alert('Success', 'Account created successfully');
-                navigation.navigate('Login');
-              }}
+              onPress={handleCreateAccount}
               style={{ flex: 1 }}
             >
-              Create Account
+              {isCA ? 'Create CA Account' : 'Create Individual Account'}
             </Button>
           )}
         </View>
+
+        <TouchableOpacity
+          style={styles.bottomLink}
+          onPress={() => navigation.navigate('Login', { userType: selectedUserType })}
+        >
+          <Text style={styles.bottomLinkText}>
+            Already have an account?{' '}
+            <Text style={styles.bottomLinkAccent}>
+              {isCA ? 'Sign in as CA' : 'Sign in as Individual'}
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.changeRoleLink}
+          onPress={() => navigation.navigate('RoleSelection')}
+        >
+          <Icon name="arrow-left" size={16} color={colors.primary[500]} />
+          <Text style={styles.changeRoleText}>Change role</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default RegisterScreen;
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  headerBlock: {
+    marginBottom: spacing.lg,
+  },
+  title: {
+    ...(typography.h2 || {}),
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    ...(typography.body || {}),
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  roleSummary: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[50],
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  roleSummaryText: {
+    marginLeft: spacing.xs,
+    color: colors.primary[500],
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  progressDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.gray[300],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: spacing.xs,
+  },
+  progressDotActive: {
+    backgroundColor: colors.primary[500],
+  },
+  progressText: {
+    color: colors.white,
+    fontWeight: 'bold',
+  },
+  sectionTitle: {
+    ...(typography.h5 || {}),
+    marginBottom: spacing.lg,
+    color: colors.text.primary,
+  },
+  twoCol: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  flexOne: {
+    flex: 1,
+  },
+  field: {
+    marginBottom: spacing.md,
+  },
+  label: {
+    ...(typography.caption || {}),
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.gray[300],
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    backgroundColor: colors.white,
+  },
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: colors.gray[300],
+    borderRadius: borderRadius.md,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+    backgroundColor: colors.white,
+  },
+  infoTitle: {
+    ...(typography.body2 || {}),
+    fontWeight: 'bold',
+    marginBottom: spacing.xs,
+    color: colors.text.primary,
+  },
+  infoText: {
+    ...(typography.caption || {}),
+    color: colors.text.secondary,
+    marginBottom: 4,
+  },
+  qcNotice: {
+    marginTop: spacing.sm,
+    padding: spacing.xs,
+    backgroundColor: `${colors.info}20`,
+    borderRadius: borderRadius.sm,
+  },
+  qcNoticeText: {
+    ...(typography.caption || {}),
+    color: colors.info,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  checkboxText: {
+    ...(typography.body2 || {}),
+    marginLeft: spacing.sm,
+    color: colors.text.primary,
+  },
+  helperText: {
+    ...(typography.caption || {}),
+    color: colors.gray[400],
+    marginTop: 4,
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  warningText: {
+    ...(typography.body2 || {}),
+    color: colors.warning,
+    marginLeft: spacing.sm,
+    flex: 1,
+  },
+  navButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+  },
+  bottomLink: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  bottomLinkText: {
+    color: colors.text.secondary,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  bottomLinkAccent: {
+    color: colors.primary[500],
+    fontWeight: '700',
+  },
+  changeRoleLink: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  changeRoleText: {
+    marginLeft: spacing.xs,
+    color: colors.primary[500],
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
 
+export default RegisterScreen;

@@ -1,9 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { theme } from '@/styles/theme';
-import { colors } from '@/styles/theme';
-import { spacing } from '@/styles/theme';
+import { colors, spacing, borderRadius } from '@/styles/theme';
 
 const Card = ({
   children,
@@ -11,17 +9,35 @@ const Card = ({
   gradient = false,
   gradientColors,
   style,
-  onPress,
   ...props
 }) => {
   const getCardStyles = () => {
+    const base = {
+      backgroundColor: colors.white,
+      borderRadius: borderRadius?.lg || 16,
+      padding: spacing.lg,
+    };
+
     switch (variant) {
       case 'elevated':
-        return theme.components.card.elevated;
+        return {
+          ...base,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 6,
+          elevation: 3,
+        };
+
       case 'outline':
-        return theme.components.card.outline;
+        return {
+          ...base,
+          borderWidth: 1,
+          borderColor: colors.border?.light || colors.border || '#e5e7eb',
+        };
+
       default:
-        return theme.components.card.default;
+        return base;
     }
   };
 
@@ -30,7 +46,10 @@ const Card = ({
   if (gradient) {
     return (
       <LinearGradient
-        colors={gradientColors || colors.gradients.card}
+        colors={
+          gradientColors ||
+          colors.gradients?.card || [colors.white, colors.white]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[cardStyles, style]}
@@ -54,7 +73,7 @@ const CardHeader = ({ children, style, ...props }) => (
       {
         paddingBottom: spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: colors.border.light,
+        borderBottomColor: colors.border?.light || colors.border || '#e5e7eb',
         marginBottom: spacing.md,
       },
       style,
@@ -77,7 +96,7 @@ const CardFooter = ({ children, style, ...props }) => (
       {
         paddingTop: spacing.md,
         borderTopWidth: 1,
-        borderTopColor: colors.border.light,
+        borderTopColor: colors.border?.light || colors.border || '#e5e7eb',
         marginTop: spacing.md,
       },
       style,
@@ -93,4 +112,3 @@ Card.Body = CardBody;
 Card.Footer = CardFooter;
 
 export default Card;
-

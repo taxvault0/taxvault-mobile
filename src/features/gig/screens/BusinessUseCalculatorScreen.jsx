@@ -13,8 +13,8 @@ import Slider from '@react-native-community/slider';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import Header from '@/components/layout/AppHeader';
-import Card from '@/components/ui/AppCard';
-import Button from '@/components/ui/AppButton';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 import { getMileageRate, PROVINCES } from '@/utils/taxUtils';
 

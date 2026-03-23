@@ -2,15 +2,11 @@ import React from 'react';
 import {
   TouchableOpacity,
   Text,
-  StyleSheet,
   ActivityIndicator,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { theme } from '@/styles/theme';
-import { colors } from '@/styles/theme';
-import { typography } from '@/styles/theme';
-import { spacing } from '@/styles/theme';
+import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 
 const Button = ({
   children,
@@ -28,19 +24,31 @@ const Button = ({
   ...props
 }) => {
   const getButtonStyles = () => {
+    const heightMap = {
+      sm: 40,
+      md: 48,
+      lg: 56,
+    };
+
+    const fontSizeMap = {
+      sm: typography?.sizes?.sm || 14,
+      md: typography?.sizes?.base || 16,
+      lg: typography?.sizes?.lg || 18,
+    };
+
     const baseStyles = {
       container: {
-        height: spacing.layout[`${size}ButtonHeight`] || spacing.layout.buttonHeight,
+        height: heightMap[size] || heightMap.md,
         paddingHorizontal: size === 'sm' ? spacing.md : spacing.lg,
-        borderRadius: spacing.radius.md,
+        borderRadius: borderRadius?.md || 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         opacity: disabled ? 0.6 : 1,
       },
       text: {
-        fontSize: size === 'sm' ? typography.sizes.sm : typography.sizes.base,
-        fontWeight: typography.weights.semiBold,
+        fontSize: fontSizeMap[size],
+        fontWeight: typography?.weights?.semiBold || '600',
       },
     };
 
@@ -56,17 +64,19 @@ const Button = ({
             color: colors.white,
           },
         };
+
       case 'secondary':
         return {
           container: {
             ...baseStyles.container,
-            backgroundColor: colors.secondary[500],
+            backgroundColor: colors.secondary?.[500] || colors.primary[400],
           },
           text: {
             ...baseStyles.text,
             color: colors.white,
           },
         };
+
       case 'outline':
         return {
           container: {
@@ -80,28 +90,31 @@ const Button = ({
             color: colors.primary[500],
           },
         };
+
       case 'success':
         return {
           container: {
             ...baseStyles.container,
-            backgroundColor: colors.success.main,
+            backgroundColor: colors.success?.main || '#16a34a',
           },
           text: {
             ...baseStyles.text,
             color: colors.white,
           },
         };
+
       case 'warning':
         return {
           container: {
             ...baseStyles.container,
-            backgroundColor: colors.warning.main,
+            backgroundColor: colors.warning?.main || '#f59e0b',
           },
           text: {
             ...baseStyles.text,
             color: colors.white,
           },
         };
+
       case 'ghost':
         return {
           container: {
@@ -113,8 +126,18 @@ const Button = ({
             color: colors.primary[500],
           },
         };
+
       default:
-        return theme.components.button.primary;
+        return {
+          container: {
+            ...baseStyles.container,
+            backgroundColor: colors.primary[500],
+          },
+          text: {
+            ...baseStyles.text,
+            color: colors.white,
+          },
+        };
     }
   };
 
@@ -125,14 +148,21 @@ const Button = ({
       {loading && (
         <ActivityIndicator
           size="small"
-          color={variant === 'outline' || variant === 'ghost' ? colors.primary[500] : colors.white}
+          color={
+            variant === 'outline' || variant === 'ghost'
+              ? colors.primary[500]
+              : colors.white
+          }
           style={{ marginRight: spacing.sm }}
         />
       )}
+
       {icon && iconPosition === 'left' && !loading && (
         <View style={{ marginRight: spacing.sm }}>{icon}</View>
       )}
+
       <Text style={[buttonStyles.text, textStyle]}>{children}</Text>
+
       {icon && iconPosition === 'right' && !loading && (
         <View style={{ marginLeft: spacing.sm }}>{icon}</View>
       )}
@@ -149,7 +179,13 @@ const Button = ({
         {...props}
       >
         <LinearGradient
-          colors={colors.gradients[variant] || colors.gradients.primary}
+          colors={
+            colors.gradients?.[variant] ||
+            colors.gradients?.primary || [
+              colors.primary[500],
+              colors.primary[400],
+            ]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[buttonStyles.container, fullWidth && { width: '100%' }]}
@@ -165,11 +201,7 @@ const Button = ({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
-      style={[
-        buttonStyles.container,
-        fullWidth && { width: '100%' },
-        style,
-      ]}
+      style={[buttonStyles.container, fullWidth && { width: '100%' }, style]}
       {...props}
     >
       <ButtonContent />
@@ -178,4 +210,3 @@ const Button = ({
 };
 
 export default Button;
-
