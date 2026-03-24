@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { authAPI } from '@/services/api';
+import { demoUsers } from '@/features/auth/utils/loginScenarios';
 
 const AuthContext = createContext(null);
 
@@ -20,14 +21,17 @@ const TOKEN_KEY = 'token';
 
 const normalizeTaxProfile = (user = {}) => {
   const raw = user.taxProfile || {};
-  const spouseTaxProfile = raw.spouseTaxProfile || {};
+  const spouseTaxProfile =
+    raw.spouseTaxProfile ||
+    user.spouseInfo?.taxProfile ||
+    {};
 
   return {
     employment: !!raw.employment,
     gigWork: !!raw.gigWork,
     selfEmployment: !!raw.selfEmployment,
     incorporatedBusiness: !!raw.incorporatedBusiness,
-    spouse: !!raw.spouse,
+    spouse: !!raw.spouse || !!user.spouseInfo,
     tfsa: !!raw.tfsa,
     rrsp: !!raw.rrsp,
     fhsa: !!raw.fhsa,
@@ -56,6 +60,14 @@ const getPrimaryUserType = (taxProfile = {}) => {
   return 'unemployed';
 };
 
+const getIncomeSourcesFromTaxProfile = (taxProfile = {}) => {
+  const sources = [];
+  if (taxProfile.employment) sources.push('employment');
+  if (taxProfile.gigWork || taxProfile.selfEmployment) sources.push('gig-work');
+  if (taxProfile.incorporatedBusiness) sources.push('business');
+  return sources;
+};
+
 const buildUser = (rawUser = {}) => {
   const taxProfile = normalizeTaxProfile(rawUser);
 
@@ -70,198 +82,52 @@ const buildUser = (rawUser = {}) => {
       (rawUser.role === 'ca' ? 'professional' : getPrimaryUserType(taxProfile)),
 
     taxProfile,
-    incomeSources: Array.isArray(rawUser.incomeSources) ? rawUser.incomeSources : [],
-    profile: rawUser.profile || {},
+    incomeSources: Array.isArray(rawUser.incomeSources)
+      ? rawUser.incomeSources
+      : getIncomeSourcesFromTaxProfile(taxProfile),
+
+    maritalStatus: rawUser.maritalStatus || 'Single',
+    spouseInfo: rawUser.spouseInfo || null,
+    dependents: Array.isArray(rawUser.dependents) ? rawUser.dependents : [],
+
+    businessName: rawUser.businessName || '',
+    platforms: Array.isArray(rawUser.platforms) ? rawUser.platforms : [],
 
     firmName: rawUser.firmName || '',
     caNumber: rawUser.caNumber || '',
     specialization: rawUser.specialization || '',
     yearsOfExperience: rawUser.yearsOfExperience || '',
-
-    clientId: rawUser.clientId || `TV-${Date.now()}`,
-    memberSince: rawUser.memberSince || new Date().getFullYear().toString(),
   };
 };
 
-/* ---------------- DEMO USERS ---------------- */
+const mapDemoUserToAuthShape = (demoUser) => {
+  const profile = demoUser.profile || {};
+  const taxProfile = profile.taxProfile || {};
+  const spouseInfo = profile.spouseInfo || null;
 
-const INCOME_STATES = [
-  {
-    key: 'unemployed',
-    label: 'Unemployed',
+  return {
+    id: demoUser.id,
+    name: profile.name || demoUser.title,
+    email: demoUser.email,
+    role: demoUser.role || 'user',
+    password: demoUser.password,
+    userType: profile.userType || getPrimaryUserType(taxProfile),
     taxProfile: {
-      employment: false,
-      gigWork: false,
-      selfEmployment: false,
-      incorporatedBusiness: false,
+      ...taxProfile,
+      spouse: !!spouseInfo,
+      spouseTaxProfile: spouseInfo?.taxProfile || {},
     },
-    incomeSources: [],
-  },
-  {
-    key: 'self-employed',
-    label: 'Self-employed / Gig Worker',
-    taxProfile: {
-      employment: false,
-      gigWork: true,
-      selfEmployment: true,
-      incorporatedBusiness: false,
-    },
-    incomeSources: ['gig-work'],
-  },
-  {
-    key: 'employed',
-    label: 'Employed',
-    taxProfile: {
-      employment: true,
-      gigWork: false,
-      selfEmployment: false,
-      incorporatedBusiness: false,
-    },
-    incomeSources: ['employment'],
-  },
-  {
-    key: 'business',
-    label: 'Business',
-    taxProfile: {
-      employment: false,
-      gigWork: false,
-      selfEmployment: false,
-      incorporatedBusiness: true,
-    },
-    incomeSources: ['business'],
-  },
-  {
-    key: 'self-employed-employed',
-    label: 'Self-employed + Employed',
-    taxProfile: {
-      employment: true,
-      gigWork: true,
-      selfEmployment: true,
-      incorporatedBusiness: false,
-    },
-    incomeSources: ['gig-work', 'employment'],
-  },
-  {
-    key: 'self-employed-business',
-    label: 'Self-employed + Business',
-    taxProfile: {
-      employment: false,
-      gigWork: true,
-      selfEmployment: true,
-      incorporatedBusiness: true,
-    },
-    incomeSources: ['gig-work', 'business'],
-  },
-  {
-    key: 'employed-business',
-    label: 'Employed + Business',
-    taxProfile: {
-      employment: true,
-      gigWork: false,
-      selfEmployment: false,
-      incorporatedBusiness: true,
-    },
-    incomeSources: ['employment', 'business'],
-  },
-  {
-    key: 'self-employed-employed-business',
-    label: 'Self-employed + Employed + Business',
-    taxProfile: {
-      employment: true,
-      gigWork: true,
-      selfEmployment: true,
-      incorporatedBusiness: true,
-    },
-    incomeSources: ['gig-work', 'employment', 'business'],
-  },
-];
-
-const DEFAULT_OPTIONAL_PROFILE = {
-  tfsa: false,
-  rrsp: false,
-  fhsa: false,
-  ccb: false,
-  investments: false,
-  donations: false,
+    incomeSources: getIncomeSourcesFromTaxProfile(taxProfile),
+    maritalStatus: profile.maritalStatus || 'Single',
+    spouseInfo,
+    dependents: Array.isArray(profile.dependents) ? profile.dependents : [],
+  };
 };
 
-const buildSingleDemoUsers = () => {
-  const users = {};
-
-  INCOME_STATES.forEach((state, index) => {
-    const email = `user${index + 1}@demo.com`;
-
-    users[email] = {
-      id: `demo-user-${state.key}`,
-      name: `Demo User - ${state.label}`,
-      email,
-      role: 'user',
-      password: 'demo1234',
-      incomeSources: state.incomeSources,
-      taxProfile: {
-        ...state.taxProfile,
-        spouse: false,
-        ...DEFAULT_OPTIONAL_PROFILE,
-        spouseIncomeSources: [],
-        spouseTaxProfile: {
-          employment: false,
-          gigWork: false,
-          selfEmployment: false,
-          incorporatedBusiness: false,
-        },
-      },
-    };
-  });
-
-  return users;
-};
-
-const buildSpouseDemoUsers = () => {
-  const users = {};
-  let count = 1;
-
-  INCOME_STATES.forEach((userState) => {
-    INCOME_STATES.forEach((spouseState) => {
-      const email = `household${count}@demo.com`;
-
-      users[email] = {
-        id: `demo-household-${count}`,
-        name: `Demo Household - ${userState.label} + Spouse ${spouseState.label}`,
-        email,
-        role: 'user',
-        password: 'demo1234',
-        incomeSources: userState.incomeSources,
-        taxProfile: {
-          ...userState.taxProfile,
-          spouse: true,
-          ...DEFAULT_OPTIONAL_PROFILE,
-          spouseIncomeSources: spouseState.incomeSources,
-          spouseTaxProfile: {
-            ...spouseState.taxProfile,
-          },
-        },
-      };
-
-      count += 1;
-    });
-  });
-
-  return users;
-};
-
-const DEMO_USERS = {
-  ...buildSingleDemoUsers(),
-  ...buildSpouseDemoUsers(),
-  'ca@demo.com': {
-    id: 'demo-ca',
-    name: 'Jane Smith, CA',
-    email: 'ca@demo.com',
-    role: 'ca',
-    password: 'demo1234',
-    caNumber: 'CA-123456',
-    firmName: 'Smith & Associates',
-  },
-};
+const DEMO_USERS = demoUsers.reduce((acc, item) => {
+  acc[item.email.trim().toLowerCase()] = mapDemoUserToAuthShape(item);
+  return acc;
+}, {});
 
 /* ---------------- PROVIDER ---------------- */
 
@@ -276,10 +142,16 @@ export const AuthProvider = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      setUser(null);
-      setToken(null);
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
+      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
+
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+
+      if (storedToken) {
+        setToken(storedToken);
+      }
     } catch (e) {
       console.log('Auth init error:', e);
       setUser(null);
@@ -311,24 +183,14 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
   };
 
-  /* ---------------- LOGIN ---------------- */
-
   const login = async (email, password, role = 'user') => {
     try {
       const normalizedEmail = email.toLowerCase().trim();
+      const normalizedPassword = password.trim();
 
       const demoUser = DEMO_USERS[normalizedEmail];
-      if (demoUser && demoUser.password === password) {
-        if (role === 'ca' && demoUser.role !== 'ca') {
-          Alert.alert('Invalid account type');
-          return { success: false };
-        }
 
-        if (role === 'user' && demoUser.role !== 'user') {
-          Alert.alert('Invalid account type');
-          return { success: false };
-        }
-
+      if (demoUser && demoUser.password === normalizedPassword) {
         await persistAuth(demoUser);
 
         Toast.show({
@@ -340,21 +202,15 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       }
 
-      const payload =
-        role === 'ca'
-          ? { email: normalizedEmail, password, role: 'ca' }
-          : { email: normalizedEmail, password };
+      const res = await authAPI.login({
+        email: normalizedEmail,
+        password: normalizedPassword,
+        role,
+      });
 
-      const res = await authAPI.login(payload);
       const { user: authUser, token: authToken } = res.data;
 
       await persistAuth(authUser, authToken);
-
-      Toast.show({
-        type: 'success',
-        text1: 'Welcome back',
-        text2: authUser?.name || 'Logged in successfully',
-      });
 
       return { success: true };
     } catch (err) {
@@ -363,14 +219,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /* ---------------- REGISTER ---------------- */
-
   const register = async (data, role = 'user') => {
     try {
-      const res = await authAPI.register({
-        ...data,
-        role,
-      });
+      const res = await authAPI.register({ ...data, role });
 
       const { user: authUser, token: authToken } = res.data;
 
@@ -384,8 +235,6 @@ export const AuthProvider = ({ children }) => {
       return { success: false };
     }
   };
-
-  /* ---------------- LOGOUT ---------------- */
 
   const logout = async () => {
     await clearAuth();
@@ -408,7 +257,6 @@ export const AuthProvider = ({ children }) => {
       isCA: user?.role === 'ca',
       isUser: user?.role === 'user',
       demoUsers: DEMO_USERS,
-      incomeStates: INCOME_STATES,
     }),
     [user, token, loading]
   );

@@ -18,7 +18,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { useTheme } from '@/app/providers/ThemeContext';
+import { useTheme } from '@/core/providers/ThemeContext';
 import { PROVINCES } from '@/utils/taxUtils';
 
 const ProfileScreen = ({ navigation }) => {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL } from './config';
+import { API_URL } from '@/constants/config';
 
 const receiptAPI = axios.create({
   baseURL: `${API_URL}/receipts`,

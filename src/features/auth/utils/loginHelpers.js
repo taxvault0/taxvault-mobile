@@ -24,3 +24,5 @@ export const getRememberedDemoPayload = (scenario) => ({
   role: scenario.role || 'user',
   caNumber: scenario.caNumber || '',
 });
+
+export const normalizeEmail = (value = '') => value.trim().toLowerCase();

@@ -15,7 +15,7 @@ import Header from '@/components/layout/AppHeader';
 import Card from '@/components/ui/Card';
 
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { useTheme } from '@/app/providers/ThemeContext';
+import { useTheme } from '@/core/providers/ThemeContext';
 
 import { typography, spacing, borderRadius } from '@/styles/theme';
 

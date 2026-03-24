@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -8,150 +8,357 @@ import {
   StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '@/features/auth/context/AuthContext';
+
+const normalizeBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    return ['true', '1', 'yes', 'y'].includes(v);
+  }
+  if (typeof value === 'number') return value === 1;
+  return false;
+};
+
+const buildPersonProfile = (raw = {}) => {
+  const taxProfile = raw?.taxProfile || {};
+  const incomeSources = Array.isArray(raw?.incomeSources) ? raw.incomeSources : [];
+  const businessInfo = raw?.businessInfo || {};
+
+  const incomeSet = new Set(incomeSources.map((item) => String(item).trim().toLowerCase()));
+  const userType = String(raw?.userType || raw?.roleType || '').trim().toLowerCase();
+
+  const employment =
+    normalizeBoolean(taxProfile.employment) ||
+    normalizeBoolean(raw?.employment) ||
+    incomeSet.has('employment') ||
+    incomeSet.has('employed') ||
+    userType.includes('employee') ||
+    userType.includes('employed');
+
+  const gigWork =
+    normalizeBoolean(taxProfile.gigWork) ||
+    normalizeBoolean(taxProfile.selfEmployed) ||
+    normalizeBoolean(raw?.gigWork) ||
+    normalizeBoolean(raw?.selfEmployed) ||
+    incomeSet.has('gig') ||
+    incomeSet.has('gig work') ||
+    incomeSet.has('self-employed') ||
+    incomeSet.has('self employed') ||
+    userType.includes('gig') ||
+    userType.includes('self-employed') ||
+    userType.includes('self employed');
+
+  const business =
+    normalizeBoolean(taxProfile.business) ||
+    normalizeBoolean(raw?.business) ||
+    normalizeBoolean(businessInfo?.hasBusiness) ||
+    normalizeBoolean(businessInfo?.isBusinessOwner) ||
+    incomeSet.has('business') ||
+    userType.includes('business');
+
+  const unemployed =
+    normalizeBoolean(taxProfile.unemployed) ||
+    normalizeBoolean(raw?.unemployed) ||
+    (!employment && !gigWork && !business);
+
+  return {
+    employment,
+    gigWork,
+    business,
+    unemployed,
+    rrsp: normalizeBoolean(taxProfile.rrsp) || normalizeBoolean(raw?.rrsp),
+    fhsa: normalizeBoolean(taxProfile.fhsa) || normalizeBoolean(raw?.fhsa),
+    tfsa: normalizeBoolean(taxProfile.tfsa) || normalizeBoolean(raw?.tfsa),
+    investments: normalizeBoolean(taxProfile.investments) || normalizeBoolean(raw?.investments),
+    donations: normalizeBoolean(taxProfile.donations) || normalizeBoolean(raw?.donations),
+    ccb: normalizeBoolean(taxProfile.ccb) || normalizeBoolean(raw?.ccb),
+    workFromHome:
+      normalizeBoolean(taxProfile.workFromHome) || normalizeBoolean(raw?.workFromHome),
+    hasAnyIncome: employment || gigWork || business,
+  };
+};
+
+const buildHouseholdProfile = (rawUser = {}) => {
+  const spouseRaw = rawUser?.spouse || {};
+  const hasSpouse = !!(
+    rawUser?.spouse &&
+    typeof rawUser.spouse === 'object' &&
+    Object.keys(rawUser.spouse).length > 0
+  );
+
+  return {
+    user: buildPersonProfile(rawUser),
+    spouse: buildPersonProfile(spouseRaw),
+    hasSpouse,
+  };
+};
 
 const DashboardScreen = ({ navigation }) => {
-  const progress = 42;
+  const { user } = useAuth();
 
-  const quickActions = [
-    {
-      title: 'Upload T4',
-      subtitle: 'Required to continue',
-      icon: 'file-document-outline',
-      primary: true,
-    },
-    {
-      title: 'Add RRSP',
-      subtitle: 'Reduce taxable income',
-      icon: 'bank-outline',
-    },
-    {
-      title: 'Add Donations',
-      subtitle: 'Claim tax credits',
-      icon: 'hand-heart-outline',
-    },
-    {
-      title: 'Review Credits',
-      subtitle: 'Find more savings',
-      icon: 'calculator-variant-outline',
-    },
-  ];
+  const profile = useMemo(() => buildHouseholdProfile(user || {}), [user]);
 
-  const requiredDocs = [
-    {
-      title: 'T4 Employment Income',
-      status: 'Missing',
-      statusType: 'danger',
-      subtitle: 'Required',
-      icon: 'briefcase-outline',
-    },
-    {
-      title: 'Notice of Assessment',
-      status: 'Recommended',
-      statusType: 'warning',
-      subtitle: 'Helpful for optimization',
-      icon: 'file-check-outline',
-    },
-    {
-      title: 'CRA Direct Deposit Info',
-      status: 'Optional',
-      statusType: 'info',
-      subtitle: 'For faster refund',
-      icon: 'bank-transfer-out',
-    },
-  ];
+  const firstName =
+    user?.firstName ||
+    user?.name?.split?.(' ')?.[0] ||
+    user?.fullName?.split?.(' ')?.[0] ||
+    'Gaurav';
 
-  const savingsCards = [
-    {
-      title: 'RRSP Contributions',
-      subtitle: 'Can lower your taxable income',
-      icon: 'cash-multiple',
-      status: 'Not Added',
-    },
-    {
-      title: 'FHSA Contributions',
-      subtitle: 'Useful for first-home buyers',
-      icon: 'home-plus-outline',
-      status: 'Optional',
-    },
-    {
-      title: 'Donations',
-      subtitle: 'May increase your refund',
-      icon: 'gift-outline',
-      status: 'Pending',
-    },
-    {
-      title: 'Medical Expenses',
-      subtitle: 'Check if you are eligible',
-      icon: 'medical-bag',
-      status: 'Not Reviewed',
-    },
-  ];
+  const dashboardMeta = useMemo(() => {
+    const requiredMissing = [];
+    const savingsOpportunities = [];
+    const completedItems = [];
 
-  const checklist = [
-    { label: 'Complete profile setup', done: true },
-    { label: 'Upload T4', done: false },
-    { label: 'Add RRSP slips', done: false },
-    { label: 'Add donation receipts', done: false },
-    { label: 'Review tax credits', done: false },
-    { label: 'Confirm CRA details', done: true },
-  ];
+    if (profile.user.employment) {
+      requiredMissing.push({
+        title: 'T4 Employment Income',
+        subtitle: 'Required',
+        icon: 'briefcase-outline',
+        routeName: 'UploadT4',
+      });
+    }
 
-  const uploads = [
-    {
+    if (profile.user.gigWork) {
+      requiredMissing.push({
+        title: 'Gig Income Records',
+        subtitle: 'T4A, annual summaries, invoices',
+        icon: 'cash-multiple',
+        routeName: 'Documents',
+        params: { category: 'gig-income' },
+      });
+    }
+
+    if (profile.user.business) {
+      requiredMissing.push({
+        title: 'Business Records',
+        subtitle: 'Sales, expenses, payroll, rent',
+        icon: 'office-building-outline',
+        routeName: 'Documents',
+        params: { category: 'business' },
+      });
+    }
+
+    if (profile.user.rrsp) {
+      savingsOpportunities.push({
+        title: 'RRSP Contributions',
+        subtitle: 'Contribution slips and deduction records',
+        icon: 'bank-outline',
+        routeName: 'Documents',
+        params: { category: 'rrsp' },
+        status: 'Enabled',
+      });
+    } else {
+      savingsOpportunities.push({
+        title: 'RRSP Contributions',
+        subtitle: 'Can lower your taxable income',
+        icon: 'bank-outline',
+        routeName: 'Documents',
+        params: { category: 'rrsp' },
+        status: 'Optional',
+      });
+    }
+
+    if (profile.user.fhsa || !profile.user.unemployed) {
+      savingsOpportunities.push({
+        title: 'FHSA Contributions',
+        subtitle: 'Useful for first-home buyers',
+        icon: 'home-plus-outline',
+        routeName: 'Documents',
+        params: { category: 'fhsa' },
+        status: profile.user.fhsa ? 'Enabled' : 'Optional',
+      });
+    }
+
+    if (profile.user.donations || !profile.user.unemployed) {
+      savingsOpportunities.push({
+        title: 'Donations',
+        subtitle: 'May increase your refund',
+        icon: 'gift-outline',
+        routeName: 'Documents',
+        params: { category: 'donations' },
+        status: profile.user.donations ? 'Enabled' : 'Optional',
+      });
+    }
+
+    if (profile.user.investments || profile.user.tfsa) {
+      savingsOpportunities.push({
+        title: 'Investments',
+        subtitle: 'T5s and account statements',
+        icon: 'chart-line',
+        routeName: 'Documents',
+        params: { category: 'investments' },
+        status: 'Enabled',
+      });
+    }
+
+    completedItems.push({
       name: 'Profile Information',
       date: 'Completed',
-      status: 'Done',
       icon: 'account-check-outline',
-    },
-    {
-      name: 'CRA Details',
-      date: 'Updated recently',
-      status: 'Done',
-      icon: 'shield-check-outline',
-    },
-    {
-      name: 'T4 Slip',
-      date: 'Not uploaded yet',
-      status: 'Missing',
-      icon: 'file-remove-outline',
-    },
-  ];
+      routeName: 'Profile',
+    });
 
-  const getStatusStyle = (type) => {
-    switch (type) {
-      case 'danger':
-        return {
-          bg: '#FEF2F2',
-          text: '#DC2626',
-        };
-      case 'warning':
-        return {
-          bg: '#FFF7ED',
-          text: '#EA580C',
-        };
-      case 'info':
-      default:
-        return {
-          bg: '#EFF6FF',
-          text: '#2563EB',
-        };
+    if (profile.hasSpouse) {
+      completedItems.push({
+        name: 'Household Setup',
+        date: 'Spouse added',
+        icon: 'account-heart-outline',
+        routeName: 'Profile',
+      });
+    }
+
+    if (profile.user.employment) {
+      completedItems.push({
+        name: 'Employment Profile',
+        date: 'Income source selected',
+        icon: 'briefcase-check-outline',
+        routeName: 'Profile',
+      });
+    }
+
+    const quickActions = [
+      profile.user.employment && {
+        title: 'Upload T4',
+        subtitle: 'Required to continue',
+        icon: 'file-document-outline',
+        routeName: 'UploadT4',
+        primary: true,
+      },
+      profile.user.gigWork && {
+        title: 'Gig Income',
+        subtitle: 'T4A and summaries',
+        icon: 'cash-multiple',
+        routeName: 'Documents',
+        params: { category: 'gig-income' },
+      },
+      (profile.user.gigWork || profile.user.business) && {
+        title: 'Add Receipts',
+        subtitle: 'Track expense proofs',
+        icon: 'receipt-outline',
+        routeName: 'Documents',
+        params: { category: 'receipts' },
+      },
+      profile.user.gigWork && {
+        title: 'Mileage',
+        subtitle: 'Track business driving',
+        icon: 'map-marker-distance',
+        routeName: 'MileageTracker',
+      },
+      {
+        title: 'RRSP',
+        subtitle: 'Add contribution slips',
+        icon: 'bank-outline',
+        routeName: 'Documents',
+        params: { category: 'rrsp' },
+      },
+      {
+        title: 'Donations',
+        subtitle: 'Claim tax credits',
+        icon: 'hand-heart-outline',
+        routeName: 'Documents',
+        params: { category: 'donations' },
+      },
+    ].filter(Boolean);
+
+    const checklist = [
+      { label: 'Complete profile setup', done: true, routeName: 'Profile' },
+      {
+        label: profile.user.employment ? 'Upload T4' : 'Review income profile',
+        done: false,
+        routeName: profile.user.employment ? 'UploadT4' : 'Profile',
+      },
+      {
+        label: 'Add supporting tax documents',
+        done: false,
+        routeName: 'Documents',
+      },
+      {
+        label: 'Upload receipts and expenses',
+        done: !(profile.user.gigWork || profile.user.business),
+        routeName: 'Documents',
+        params: { category: 'receipts' },
+      },
+      {
+        label: 'Review tax checklist',
+        done: false,
+        routeName: 'Checklist',
+      },
+    ];
+
+    return {
+      requiredMissing,
+      savingsOpportunities,
+      completedItems,
+      quickActions,
+      checklist,
+    };
+  }, [profile]);
+
+  const progress = useMemo(() => {
+    const total = dashboardMeta.checklist.length || 1;
+    const done = dashboardMeta.checklist.filter((item) => item.done).length;
+    return Math.max(20, Math.round((done / total) * 100));
+  }, [dashboardMeta]);
+
+  const openDrawer = () => {
+    if (typeof navigation?.openDrawer === 'function') {
+      navigation.openDrawer();
+      return;
+    }
+
+    const parent = navigation?.getParent?.();
+    if (parent && typeof parent.openDrawer === 'function') {
+      parent.openDrawer();
+      return;
+    }
+
+    const grandParent = parent?.getParent?.();
+    if (grandParent && typeof grandParent.openDrawer === 'function') {
+      grandParent.openDrawer();
     }
   };
+
+  const navigateTo = (routeName, params = {}) => {
+    if (!routeName) return;
+
+    try {
+      navigation.navigate(routeName, params);
+    } catch (error) {
+      console.log('Navigation error:', routeName, error);
+    }
+  };
+
+  const profileLabel = useMemo(() => {
+    const labels = [];
+
+    if (profile.user.employment) labels.push('Employed');
+    if (profile.user.gigWork) labels.push('Self-Employed');
+    if (profile.user.business) labels.push('Business Owner');
+    if (profile.user.unemployed && labels.length === 0) labels.push('Unemployed');
+
+    if (profile.hasSpouse) labels.push('With Spouse');
+
+    return `${labels.join(' • ')} Tax Profile`;
+  }, [profile]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
-        style={styles.scroll}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.greeting}>Good evening, Gaurav</Text>
-            <Text style={styles.profileTag}>Employed Tax Profile • 2025 Return</Text>
+          <TouchableOpacity style={styles.menuButton} onPress={openDrawer}>
+            <Icon name="menu" size={24} color="#0F172A" />
+          </TouchableOpacity>
+
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.greeting}>Good evening, {firstName}</Text>
+            <Text style={styles.profileTag}>{profileLabel} • 2025 Return</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerIconButton}>
+          <TouchableOpacity style={styles.bellButton}>
             <Icon name="bell-outline" size={22} color="#0F172A" />
           </TouchableOpacity>
         </View>
@@ -165,10 +372,10 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.heroPercent}>{progress}%</Text>
           </View>
 
-          <Text style={styles.heroTitle}>You are making good progress</Text>
+          <Text style={styles.heroTitle}>Your dashboard is now profile-driven</Text>
           <Text style={styles.heroSubtitle}>
-            Upload your T4 and review deductions like RRSP, FHSA, and donations to
-            move closer to filing.
+            Actions change based on employment, self-employment, business, spouse,
+            and optional tax categories like RRSP, FHSA, donations, and investments.
           </Text>
 
           <View style={styles.progressTrack}>
@@ -177,25 +384,37 @@ const DashboardScreen = ({ navigation }) => {
 
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStatBox}>
-              <Text style={styles.heroStatValue}>1</Text>
-              <Text style={styles.heroStatLabel}>Required Missing</Text>
+              <Text style={styles.heroStatValue}>{dashboardMeta.requiredMissing.length}</Text>
+              <Text style={styles.heroStatLabel}>Required Items</Text>
             </View>
             <View style={styles.heroStatBox}>
-              <Text style={styles.heroStatValue}>3</Text>
-              <Text style={styles.heroStatLabel}>Savings Opportunities</Text>
+              <Text style={styles.heroStatValue}>{dashboardMeta.savingsOpportunities.length}</Text>
+              <Text style={styles.heroStatLabel}>Tax Saving Areas</Text>
             </View>
-            <View style={styles.heroStatBox}>
-              <Text style={styles.heroStatValue}>2</Text>
+            <View style={[styles.heroStatBox, styles.heroStatBoxLast]}>
+              <Text style={styles.heroStatValue}>
+                {dashboardMeta.checklist.filter((item) => item.done).length}
+              </Text>
               <Text style={styles.heroStatLabel}>Completed</Text>
             </View>
           </View>
 
           <View style={styles.heroButtonRow}>
-            <TouchableOpacity style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Continue Setup</Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() =>
+                navigateTo(profile.user.employment ? 'UploadT4' : 'Checklist')
+              }
+            >
+              <Text style={styles.primaryButtonText}>
+                {profile.user.employment ? 'Upload T4' : 'Continue Setup'}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryButton}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => navigateTo('Checklist')}
+            >
               <Text style={styles.secondaryButtonText}>View Checklist</Text>
             </TouchableOpacity>
           </View>
@@ -204,19 +423,17 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>See all</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.quickGrid}>
-            {quickActions.map((item) => (
+            {dashboardMeta.quickActions.map((item) => (
               <TouchableOpacity
                 key={item.title}
                 style={[
                   styles.quickCard,
                   item.primary && styles.quickCardPrimary,
                 ]}
+                onPress={() => navigateTo(item.routeName, item.params)}
               >
                 <View
                   style={[
@@ -230,6 +447,7 @@ const DashboardScreen = ({ navigation }) => {
                     color={item.primary ? '#2563EB' : '#475569'}
                   />
                 </View>
+
                 <Text
                   style={[
                     styles.quickCardTitle,
@@ -238,6 +456,7 @@ const DashboardScreen = ({ navigation }) => {
                 >
                   {item.title}
                 </Text>
+
                 <Text
                   style={[
                     styles.quickCardSubtitle,
@@ -254,45 +473,42 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Required Documents</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>Manage</Text>
-            </TouchableOpacity>
           </View>
 
-          {requiredDocs.map((doc) => {
-            const statusStyle = getStatusStyle(doc.statusType);
-            return (
-              <TouchableOpacity key={doc.title} style={styles.listCard}>
-                <View style={styles.listLeft}>
-                  <View style={styles.listIconWrap}>
-                    <Icon name={doc.icon} size={22} color="#2563EB" />
-                  </View>
-                  <View style={styles.listTextWrap}>
-                    <Text style={styles.listTitle}>{doc.title}</Text>
-                    <Text style={styles.listSubtitle}>{doc.subtitle}</Text>
-                  </View>
+          {dashboardMeta.requiredMissing.map((doc) => (
+            <TouchableOpacity
+              key={doc.title}
+              style={styles.listCard}
+              onPress={() => navigateTo(doc.routeName, doc.params)}
+            >
+              <View style={styles.listLeft}>
+                <View style={styles.listIconWrap}>
+                  <Icon name={doc.icon} size={22} color="#2563EB" />
                 </View>
+                <View style={styles.listTextWrap}>
+                  <Text style={styles.listTitle}>{doc.title}</Text>
+                  <Text style={styles.listSubtitle}>{doc.subtitle}</Text>
+                </View>
+              </View>
 
-                <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
-                  <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
-                    {doc.status}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+              <View style={styles.statusPill}>
+                <Text style={styles.statusPillText}>Open</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Ways to Save Tax</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>Explore</Text>
-            </TouchableOpacity>
           </View>
 
-          {savingsCards.map((item) => (
-            <TouchableOpacity key={item.title} style={styles.savingsCard}>
+          {dashboardMeta.savingsOpportunities.map((item) => (
+            <TouchableOpacity
+              key={item.title}
+              style={styles.savingsCard}
+              onPress={() => navigateTo(item.routeName, item.params)}
+            >
               <View style={styles.savingsLeft}>
                 <View style={styles.savingsIconWrap}>
                   <Icon name={item.icon} size={20} color="#0F172A" />
@@ -314,8 +530,12 @@ const DashboardScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.checklistCard}>
-            {checklist.map((item) => (
-              <TouchableOpacity key={item.label} style={styles.checklistRow}>
+            {dashboardMeta.checklist.map((item) => (
+              <TouchableOpacity
+                key={item.label}
+                style={styles.checklistRow}
+                onPress={() => navigateTo(item.routeName, item.params)}
+              >
                 <View
                   style={[
                     styles.checkIcon,
@@ -328,6 +548,7 @@ const DashboardScreen = ({ navigation }) => {
                     color={item.done ? '#16A34A' : '#F59E0B'}
                   />
                 </View>
+
                 <Text
                   style={[
                     styles.checklistText,
@@ -344,13 +565,14 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>Open Vault</Text>
-            </TouchableOpacity>
           </View>
 
-          {uploads.map((item) => (
-            <TouchableOpacity key={item.name} style={styles.activityCard}>
+          {dashboardMeta.completedItems.map((item) => (
+            <TouchableOpacity
+              key={item.name}
+              style={styles.activityCard}
+              onPress={() => navigateTo(item.routeName)}
+            >
               <View style={styles.activityLeft}>
                 <View style={styles.activityIconWrap}>
                   <Icon name={item.icon} size={20} color="#2563EB" />
@@ -373,24 +595,51 @@ const DashboardScreen = ({ navigation }) => {
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Employment income</Text>
-            <Text style={styles.summaryValue}>Waiting for T4</Text>
+            <Text style={styles.summaryValue}>
+              {profile.user.employment ? 'T4 required' : 'Not selected'}
+            </Text>
           </View>
+
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>RRSP deductions</Text>
-            <Text style={styles.summaryValue}>Not added</Text>
+            <Text style={styles.summaryLabel}>Self-employment</Text>
+            <Text style={styles.summaryValue}>
+              {profile.user.gigWork ? 'Active' : 'Not selected'}
+            </Text>
           </View>
+
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Donations</Text>
-            <Text style={styles.summaryValue}>Pending</Text>
+            <Text style={styles.summaryLabel}>Business owner</Text>
+            <Text style={styles.summaryValue}>
+              {profile.user.business ? 'Active' : 'Not selected'}
+            </Text>
           </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Optional deductions</Text>
+            <Text style={styles.summaryValue}>
+              {[
+                profile.user.rrsp && 'RRSP',
+                profile.user.fhsa && 'FHSA',
+                profile.user.donations && 'Donations',
+                profile.user.investments && 'Investments',
+              ]
+                .filter(Boolean)
+                .join(', ') || 'Not added'}
+            </Text>
+          </View>
+
           <View style={styles.summaryDivider} />
+
           <View style={styles.summaryRow}>
             <Text style={styles.summaryRefundLabel}>Estimated refund</Text>
-            <Text style={styles.summaryRefundValue}>Not enough data yet</Text>
+            <Text style={styles.summaryRefundValue}>Needs more data</Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.bottomCta}>
+        <TouchableOpacity
+          style={styles.bottomCta}
+          onPress={() => navigateTo('Checklist')}
+        >
           <Text style={styles.bottomCtaText}>Continue to File Tax</Text>
           <Icon name="arrow-right" size={20} color="#FFFFFF" />
         </TouchableOpacity>
@@ -406,9 +655,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  scroll: {
-    flex: 1,
-  },
   container: {
     padding: 20,
     paddingBottom: 36,
@@ -418,6 +664,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 22,
+  },
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  headerTextWrap: {
+    flex: 1,
+    marginHorizontal: 14,
   },
   greeting: {
     fontSize: 24,
@@ -430,7 +690,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
-  headerIconButton: {
+  bellButton: {
     width: 44,
     height: 44,
     borderRadius: 14,
@@ -465,12 +725,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    gap: 6,
   },
   heroBadgeText: {
     color: '#2563EB',
     fontWeight: '700',
     fontSize: 12,
+    marginLeft: 6,
   },
   heroPercent: {
     fontSize: 22,
@@ -504,7 +764,6 @@ const styles = StyleSheet.create({
   heroStatsRow: {
     flexDirection: 'row',
     marginTop: 18,
-    gap: 10,
   },
   heroStatBox: {
     flex: 1,
@@ -514,6 +773,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginRight: 10,
+  },
+  heroStatBoxLast: {
+    marginRight: 0,
   },
   heroStatValue: {
     fontSize: 18,
@@ -528,7 +791,6 @@ const styles = StyleSheet.create({
   },
   heroButtonRow: {
     flexDirection: 'row',
-    gap: 12,
     marginTop: 18,
   },
   primaryButton: {
@@ -537,6 +799,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
+    marginRight: 6,
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -549,6 +812,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
+    marginLeft: 6,
   },
   secondaryButtonText: {
     color: '#2563EB',
@@ -569,16 +833,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
   },
-  sectionLink: {
-    color: '#2563EB',
-    fontSize: 14,
-    fontWeight: '700',
-  },
   quickGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
   },
   quickCard: {
     width: '48%',
@@ -588,6 +846,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     minHeight: 132,
+    marginBottom: 12,
   },
   quickCardPrimary: {
     backgroundColor: '#0F172A',
@@ -665,10 +924,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     marginLeft: 12,
+    backgroundColor: '#EFF6FF',
   },
   statusPillText: {
     fontSize: 12,
     fontWeight: '800',
+    color: '#2563EB',
   },
   savingsCard: {
     backgroundColor: '#FFFFFF',
@@ -797,16 +1058,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 9,
-    gap: 12,
   },
   summaryLabel: {
     fontSize: 14,
     color: '#64748B',
+    flex: 1,
+    marginRight: 12,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
+    flex: 1,
+    textAlign: 'right',
   },
   summaryDivider: {
     height: 1,
@@ -831,11 +1095,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
   },
   bottomCtaText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '800',
+    marginRight: 10,
   },
 });

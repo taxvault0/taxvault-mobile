@@ -13,51 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 import { useAuth } from '@/features/auth/context/AuthContext';
-
-const INCOME_STATES = [
-  { key: 'unemployed', label: 'Unemployed' },
-  { key: 'self-employed', label: 'Self-employed / Gig Worker' },
-  { key: 'employed', label: 'Employed' },
-  { key: 'business', label: 'Business' },
-  { key: 'self-employed-employed', label: 'Self-employed + Employed' },
-  { key: 'self-employed-business', label: 'Self-employed + Business' },
-  { key: 'employed-business', label: 'Employed + Business' },
-  {
-    key: 'self-employed-employed-business',
-    label: 'Self-employed + Employed + Business',
-  },
-];
-
-const buildDemoOptions = () => {
-  const options = [];
-
-  INCOME_STATES.forEach((state, index) => {
-    options.push({
-      key: `single-${state.key}`,
-      label: `Single User — ${state.label}`,
-      email: `user${index + 1}@demo.com`,
-      password: 'demo1234',
-    });
-  });
-
-  let householdCount = 1;
-
-  INCOME_STATES.forEach((userState) => {
-    INCOME_STATES.forEach((spouseState) => {
-      options.push({
-        key: `household-${userState.key}-${spouseState.key}`,
-        label: `User: ${userState.label} • Spouse: ${spouseState.label}`,
-        email: `household${householdCount}@demo.com`,
-        password: 'demo1234',
-      });
-      householdCount += 1;
-    });
-  });
-
-  return options;
-};
-
-const DEMO_USER_OPTIONS = buildDemoOptions();
+import { demoUsers, ENABLE_DEMO_LOGINS } from '@/features/auth/utils/loginScenarios';
+import {
+  validateLoginForm,
+  getRememberedDemoPayload,
+} from '@/features/auth/utils/loginHelpers';
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
@@ -68,6 +28,7 @@ const LoginScreen = ({ navigation }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showDemoDropdown, setShowDemoDropdown] = useState(false);
   const [selectedDemoLabel, setSelectedDemoLabel] = useState('');
+  const [errors, setErrors] = useState({});
 
   const title = useMemo(() => 'Sign in as Individual User', []);
   const subtitle = useMemo(
@@ -87,16 +48,24 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) return;
+    const validationErrors = validateLoginForm({ email, password }, 'user');
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) return;
+
     await handleLoginWithCredentials(email, password);
   };
 
   const handleSelectDemoUser = async (demoUser) => {
-    setSelectedDemoLabel(demoUser.label);
-    setEmail(demoUser.email);
-    setPassword(demoUser.password);
+    const remembered = getRememberedDemoPayload(demoUser);
+
+    setSelectedDemoLabel(demoUser.title);
+    setEmail(remembered.email);
+    setPassword(remembered.password);
+    setErrors({});
     setShowDemoDropdown(false);
-    await handleLoginWithCredentials(demoUser.email, demoUser.password);
+
+    await handleLoginWithCredentials(remembered.email, remembered.password);
   };
 
   const handleGoToRegister = () => {
@@ -143,67 +112,67 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.formCard}>
-              <Text style={styles.sectionTitle}>Demo accounts</Text>
-              <Text style={styles.sectionSubtitle}>
-                8 single-user scenarios + 64 user/spouse scenarios
-              </Text>
+              {ENABLE_DEMO_LOGINS && (
+                <>
+                  <Text style={styles.sectionTitle}>Demo accounts</Text>
 
-              <TouchableOpacity
-                style={styles.dropdownTrigger}
-                onPress={() => setShowDemoDropdown((prev) => !prev)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.dropdownTriggerLeft}>
-                  <Icon
-                    name="account-multiple-outline"
-                    size={20}
-                    color={colors.text.secondary}
-                  />
-                  <Text
-                    style={[
-                      styles.dropdownTriggerText,
-                      !selectedDemoLabel && styles.dropdownPlaceholder,
-                    ]}
+                  <TouchableOpacity
+                    style={styles.dropdownTrigger}
+                    onPress={() => setShowDemoDropdown((prev) => !prev)}
+                    activeOpacity={0.85}
                   >
-                    {selectedDemoLabel || 'Select demo user scenario'}
-                  </Text>
-                </View>
-                <Icon
-                  name={showDemoDropdown ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={colors.text.secondary}
-                />
-              </TouchableOpacity>
-
-              {showDemoDropdown && (
-                <View style={styles.dropdownMenu}>
-                  <ScrollView
-                    style={styles.dropdownScroll}
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator
-                  >
-                    {DEMO_USER_OPTIONS.map((item) => (
-                      <TouchableOpacity
-                        key={item.key}
-                        style={styles.dropdownItem}
-                        onPress={() => handleSelectDemoUser(item)}
-                        disabled={submitting}
+                    <View style={styles.dropdownTriggerLeft}>
+                      <Icon
+                        name="account-multiple-outline"
+                        size={20}
+                        color={colors.text.secondary}
+                      />
+                      <Text
+                        style={[
+                          styles.dropdownTriggerText,
+                          !selectedDemoLabel && styles.dropdownPlaceholder,
+                        ]}
                       >
-                        <Text style={styles.dropdownItemText}>{item.label}</Text>
-                        <Text style={styles.dropdownItemEmail}>{item.email}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                        {selectedDemoLabel || 'Select demo user scenario'}
+                      </Text>
+                    </View>
+                    <Icon
+                      name={showDemoDropdown ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.text.secondary}
+                    />
+                  </TouchableOpacity>
 
-              <View style={styles.divider} />
+                  {showDemoDropdown && (
+                    <View style={styles.dropdownMenu}>
+                      <ScrollView
+                        style={styles.dropdownScroll}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator
+                      >
+                        {demoUsers.map((item) => (
+                          <TouchableOpacity
+                            key={item.id}
+                            style={styles.dropdownItem}
+                            onPress={() => handleSelectDemoUser(item)}
+                            disabled={submitting}
+                          >
+                            <Text style={styles.dropdownItemText}>{item.title}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  <View style={styles.divider} />
+                </>
+              )}
 
               <Text style={styles.sectionTitle}>Manual login</Text>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email</Text>
-                <View style={styles.inputWrapper}>
+                <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
                   <Icon
                     name="email-outline"
                     size={20}
@@ -214,17 +183,23 @@ const LoginScreen = ({ navigation }) => {
                     placeholder="Enter your email"
                     placeholderTextColor={colors.text.secondary}
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(value) => {
+                      setEmail(value);
+                      if (errors.email) {
+                        setErrors((prev) => ({ ...prev, email: '' }));
+                      }
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
                 </View>
+                {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Password</Text>
-                <View style={styles.inputWrapper}>
+                <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
                   <Icon
                     name="lock-outline"
                     size={20}
@@ -235,14 +210,17 @@ const LoginScreen = ({ navigation }) => {
                     placeholder="Enter your password"
                     placeholderTextColor={colors.text.secondary}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(value) => {
+                      setPassword(value);
+                      if (errors.password) {
+                        setErrors((prev) => ({ ...prev, password: '' }));
+                      }
+                    }}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword((prev) => !prev)}
-                  >
+                  <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)}>
                     <Icon
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
@@ -250,6 +228,9 @@ const LoginScreen = ({ navigation }) => {
                     />
                   </TouchableOpacity>
                 </View>
+                {!!errors.password && (
+                  <Text style={styles.errorText}>{errors.password}</Text>
+                )}
               </View>
 
               <TouchableOpacity
@@ -376,11 +357,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-  },
   dropdownTrigger: {
     minHeight: 52,
     borderWidth: 1,
@@ -426,12 +402,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     color: colors.text.primary,
     fontSize: 14,
-    fontWeight: '600',
-  },
-  dropdownItemEmail: {
-    color: colors.text.secondary,
-    fontSize: 12,
-    marginTop: 2,
+    fontWeight: '700',
   },
   divider: {
     height: 1,
@@ -462,6 +433,15 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     color: colors.text.primary,
     fontSize: 15,
+  },
+  inputError: {
+    borderColor: '#DC2626',
+  },
+  errorText: {
+    marginTop: 6,
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '500',
   },
   forgotRow: {
     alignSelf: 'flex-end',

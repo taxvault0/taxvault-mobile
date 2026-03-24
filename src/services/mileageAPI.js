@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL } from './config';
+import { API_URL } from '@/constants/config';
 
 const mileageAPI = axios.create({
   baseURL: `${API_URL}/mileage`,

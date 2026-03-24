@@ -12,154 +12,177 @@ const createTaxProfile = ({
   incorporatedBusiness,
 });
 
-export const demoUsers = [
+const createProfile = ({
+  name,
+  userType = 'regular',
+  taxProfile,
+  maritalStatus = 'Single',
+  spouseInfo = null,
+  dependents = [],
+  businessName,
+  platforms = [],
+}) => ({
+  name,
+  userType,
+  taxProfile,
+  maritalStatus,
+  spouseInfo,
+  dependents,
+  platforms,
+  ...(businessName ? { businessName } : {}),
+});
+
+const createDemoUser = ({
+  id,
+  title,
+  email,
+  password = 'demo1234',
+  role = 'user',
+  tone = 'blue',
+  profile,
+}) => ({
+  id,
+  title,
+  email,
+  password,
+  role,
+  tone,
+  profile,
+});
+
+const INCOME_STATES = [
   {
-    id: 'demo-user-basic',
-    title: 'T4 Employee',
-    subtitle: 'Single employment profile',
-    email: 'employee@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'blue',
-    profile: {
-      name: 'Anna Patel',
-      userType: 'employee',
-      taxProfile: createTaxProfile({ employment: true }),
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-    },
+    key: 'unemployed',
+    label: 'Unemployed',
+    userType: 'regular',
+    taxProfile: createTaxProfile({}),
+    platforms: [],
+    businessName: '',
   },
   {
-    id: 'demo-user-gig',
-    title: 'Gig Worker',
-    subtitle: 'Uber / DoorDash style profile',
-    email: 'gig@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'green',
-    profile: {
-      name: 'Rohit Sharma',
-      userType: 'gig-worker',
-      taxProfile: createTaxProfile({ gigWork: true }),
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-      platforms: ['Uber', 'DoorDash'],
-    },
+    key: 'employed',
+    label: 'Employed',
+    userType: 'employee',
+    taxProfile: createTaxProfile({ employment: true }),
+    platforms: [],
+    businessName: '',
   },
   {
-    id: 'demo-user-self-employed',
-    title: 'Self-Employed',
-    subtitle: 'Freelancer / contractor',
-    email: 'selfemployed@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'amber',
-    profile: {
-      name: 'Sarah Khan',
-      userType: 'self-employed',
-      taxProfile: createTaxProfile({ selfEmployment: true }),
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-    },
+    key: 'self-employed',
+    label: 'Self-Employed',
+    userType: 'self-employed',
+    taxProfile: createTaxProfile({ selfEmployment: true, gigWork: true }),
+    platforms: ['Uber', 'DoorDash'],
+    businessName: '',
   },
   {
-    id: 'demo-user-business',
-    title: 'Business Owner',
-    subtitle: 'Corporation / incorporated business',
-    email: 'business@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'purple',
-    profile: {
-      name: 'Michael Lee',
-      userType: 'business',
-      taxProfile: createTaxProfile({ incorporatedBusiness: true }),
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-      businessName: 'Lee Consulting Inc.',
-    },
+    key: 'business',
+    label: 'Business',
+    userType: 'business',
+    taxProfile: createTaxProfile({ incorporatedBusiness: true }),
+    platforms: [],
+    businessName: 'Demo Business Inc.',
   },
   {
-    id: 'demo-user-mixed',
-    title: 'T4 + Gig',
-    subtitle: 'Employment plus side income',
-    email: 'mixed@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'indigo',
-    profile: {
-      name: 'Aman Gill',
-      userType: 'gig-worker',
-      taxProfile: createTaxProfile({ employment: true, gigWork: true }),
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-      platforms: ['Instacart'],
-    },
+    key: 'employed-self-employed',
+    label: 'Employed + Self-Employed',
+    userType: 'self-employed',
+    taxProfile: createTaxProfile({ employment: true, selfEmployment: true, gigWork: true }),
+    platforms: ['Uber'],
+    businessName: '',
   },
   {
-    id: 'demo-user-spouse-1',
-    title: 'Gig + Spouse T4',
-    subtitle: 'Household scenario',
-    email: 'gigspouset4@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'teal',
-    profile: {
-      name: 'Karan Mehta',
-      userType: 'gig-worker',
-      taxProfile: createTaxProfile({ gigWork: true }),
-      maritalStatus: 'Married',
-      spouseInfo: {
-        name: 'Neha Mehta',
-        incomeType: 'employment',
-        annualIncome: '62000',
-      },
-      dependents: [],
-      platforms: ['Uber'],
-    },
+    key: 'employed-business',
+    label: 'Employed + Business',
+    userType: 'business',
+    taxProfile: createTaxProfile({ employment: true, incorporatedBusiness: true }),
+    platforms: [],
+    businessName: 'Demo Business Inc.',
   },
   {
-    id: 'demo-user-spouse-2',
-    title: 'T4 + Business',
-    subtitle: 'Employment plus incorporated business',
-    email: 't4business@taxvault.demo',
-    password: 'Password123!',
-    role: 'user',
-    tone: 'rose',
-    profile: {
-      name: 'Anna Patel',
-      userType: 'business',
-      taxProfile: createTaxProfile({ employment: true, incorporatedBusiness: true }),
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-      businessName: 'Patel Holdings Inc.',
-    },
+    key: 'self-employed-business',
+    label: 'Self-Employed + Business',
+    userType: 'business',
+    taxProfile: createTaxProfile({
+      selfEmployment: true,
+      gigWork: true,
+      incorporatedBusiness: true,
+    }),
+    platforms: ['DoorDash'],
+    businessName: 'Demo Business Inc.',
   },
   {
-    id: 'demo-ca',
-    title: 'CA Demo',
-    subtitle: 'Chartered Accountant login',
-    email: 'ca@taxvault.demo',
-    password: 'Password123!',
-    role: 'ca',
-    caNumber: 'CA-10001',
-    tone: 'slate',
-    profile: {
-      name: 'Demo CA',
-      userType: 'ca',
-      taxProfile: null,
-      maritalStatus: 'Single',
-      spouseInfo: null,
-      dependents: [],
-    },
+    key: 'employed-self-employed-business',
+    label: 'Employed + Self-Employed + Business',
+    userType: 'business',
+    taxProfile: createTaxProfile({
+      employment: true,
+      selfEmployment: true,
+      gigWork: true,
+      incorporatedBusiness: true,
+    }),
+    platforms: ['Uber', 'DoorDash'],
+    businessName: 'Demo Business Inc.',
   },
 ];
+
+const spouseInfoFromState = (state, index) => ({
+  name: `Spouse ${index}`,
+  incomeType: state.label,
+  annualIncome:
+    state.key === 'unemployed'
+      ? '0'
+      : state.key.includes('business')
+      ? '90000'
+      : state.key.includes('self-employed')
+      ? '45000'
+      : '65000',
+  taxProfile: state.taxProfile,
+});
+
+const singleScenario = (state, index) =>
+  createDemoUser({
+    id: `u-${state.key}`,
+    title: `U-${state.label}`,
+    email: `u-${state.key}@demo.com`,
+    profile: createProfile({
+      name: `Demo User ${index}`,
+      userType: state.userType,
+      taxProfile: state.taxProfile,
+      maritalStatus: 'Single',
+      spouseInfo: null,
+      dependents: [],
+      businessName: state.businessName,
+      platforms: state.platforms,
+    }),
+  });
+
+const householdScenario = (userState, spouseState, index) =>
+  createDemoUser({
+    id: `u-${userState.key}-s-${spouseState.key}`,
+    title: `U-${userState.label} + S-${spouseState.label}`,
+    email: `u-${userState.key}-s-${spouseState.key}@demo.com`,
+    profile: createProfile({
+      name: `Demo Household ${index}`,
+      userType: userState.userType,
+      taxProfile: userState.taxProfile,
+      maritalStatus: 'Married',
+      spouseInfo: spouseInfoFromState(spouseState, index),
+      dependents: [],
+      businessName: userState.businessName,
+      platforms: userState.platforms,
+    }),
+  });
+
+const singleUsers = INCOME_STATES.map((state, index) => singleScenario(state, index + 1));
+
+const householdUsers = INCOME_STATES.flatMap((userState, userIndex) =>
+  INCOME_STATES.map((spouseState, spouseIndex) =>
+    householdScenario(userState, spouseState, `${userIndex + 1}-${spouseIndex + 1}`)
+  )
+);
+
+export const demoUsers = [...singleUsers, ...householdUsers];
 
 export const toneMap = {
   blue: {
