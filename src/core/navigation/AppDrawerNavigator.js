@@ -9,6 +9,7 @@ import DocumentsScreen from '@/features/documents/screens/DocumentsScreen';
 import ChecklistScreen from '@/features/checklist/screens/ChecklistScreen';
 import TaxSummaryScreen from '@/features/summary/screens/TaxSummaryScreen';
 import HelpSupportScreen from '@/features/support/screens/HelpSupportScreen';
+import ReceiptsScreen from '@/features/receipts/screens/ReceiptsScreen';
 import { useAuth } from '@/features/auth/context/AuthContext';
 
 const Drawer = createDrawerNavigator();
@@ -110,7 +111,7 @@ const getDrawerItems = (profile) => {
     items.splice(3, 0, {
       label: 'Receipts & Expenses',
       icon: 'receipt-outline',
-      route: 'DrawerDocuments',
+      route: 'DrawerReceipts',
     });
   }
 
@@ -222,6 +223,7 @@ const AppDrawerNavigator = () => {
       <Drawer.Screen name="MainTabs" component={MainTabNavigator} />
       <Drawer.Screen name="TaxProfile" component={TaxProfileScreen} />
       <Drawer.Screen name="DrawerDocuments" component={DocumentsScreen} />
+      <Drawer.Screen name="DrawerReceipts" component={ReceiptsScreen} />
       <Drawer.Screen name="DrawerChecklist" component={ChecklistScreen} />
       <Drawer.Screen name="DrawerSummary" component={TaxSummaryScreen} />
       <Drawer.Screen name="HelpSupport" component={HelpSupportScreen} />

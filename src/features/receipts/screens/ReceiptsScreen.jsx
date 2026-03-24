@@ -1,637 +1,425 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Modal,
-  FlatList,
-  Alert,
   StyleSheet,
-  RefreshControl,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Header from '@/components/layout/AppHeader';
-import BottomNav from '@/components/layout/BottomTabBar';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
-import EmptyState from '@/components/ui/EmptyState';
-import { colors, typography, spacing, borderRadius } from '@/styles/theme';
-import { getReceipts, deleteReceipt } from '@/services/receiptAPI';
+import receiptCategories from '@/features/receipts/constants/receiptCategories';
+
+const demoReceipts = [
+  {
+    id: 'r1',
+    title: 'Shell Gas Station',
+    category: 'fuel',
+    amount: 74.82,
+    date: '2026-03-21',
+  },
+  {
+    id: 'r2',
+    title: 'Canadian Tire Oil Change',
+    category: 'maintenance',
+    amount: 109.99,
+    date: '2026-03-18',
+  },
+  {
+    id: 'r3',
+    title: 'Downtown Parking',
+    category: 'parking',
+    amount: 18.5,
+    date: '2026-03-16',
+  },
+  {
+    id: 'r4',
+    title: 'Rogers Mobile Bill',
+    category: 'mobile-internet',
+    amount: 95.0,
+    date: '2026-03-11',
+  },
+];
+
+const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
 
 const ReceiptsScreen = () => {
   const navigation = useNavigation();
-  const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [sortBy, setSortBy] = useState('date-desc');
-  const [dateRange, setDateRange] = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
 
-  // Fetch receipts from API
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['receipts', selectedCategory, sortBy, dateRange, searchQuery],
-    queryFn: () => getReceipts({
-      category: selectedCategory !== 'all' ? selectedCategory : undefined,
-      sort: sortBy,
-      dateRange: dateRange !== 'all' ? dateRange : undefined,
-      search: searchQuery || undefined,
-    }),
-  });
+  const filteredReceipts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return demoReceipts;
 
-  const receipts = data?.receipts || [];
+    return demoReceipts.filter((item) => {
+      const category = receiptCategories.find((c) => c.key === item.category);
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: deleteReceipt,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['receipts'] });
-      Alert.alert('Success', 'Receipt deleted successfully');
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || 'Failed to delete receipt');
-    },
-  });
+      return (
+        item.title.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query) ||
+        category?.label?.toLowerCase().includes(query)
+      );
+    });
+  }, [search]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
-
-  const categories = [
-    { id: 'all', label: 'All', icon: 'view-grid', color: colors.gray[500] },
-    { id: 'fuel', label: 'Fuel', icon: 'gas-station', color: '#FF6B35' },
-    { id: 'maintenance', label: 'Maintenance', icon: 'wrench', color: '#ED6A5E' },
-    { id: 'insurance', label: 'Insurance', icon: 'shield', color: '#005A9C' },
-    { id: 'office-supplies', label: 'Office', icon: 'briefcase', color: '#2E7D32' },
-    { id: 'meals', label: 'Meals', icon: 'food', color: '#FFD700' },
-    { id: 'transportation', label: 'Transport', icon: 'car', color: '#9C27B0' },
-    { id: 'software', label: 'Software', icon: 'laptop', color: colors.primary[500] },
-    { id: 'utilities', label: 'Utilities', icon: 'flash', color: '#FFA500' },
-    { id: 'rent', label: 'Rent', icon: 'home', color: '#8B4513' },
-    { id: 'other', label: 'Other', icon: 'dots-horizontal', color: colors.gray[600] },
-  ];
-
-  const sortOptions = [
-    { id: 'date-desc', label: 'Newest First' },
-    { id: 'date-asc', label: 'Oldest First' },
-    { id: 'amount-desc', label: 'Highest Amount' },
-    { id: 'amount-asc', label: 'Lowest Amount' },
-    { id: 'vendor-asc', label: 'Vendor (A-Z)' },
-  ];
-
-  const dateRanges = [
-    { id: 'all', label: 'All Time' },
-    { id: 'today', label: 'Today' },
-    { id: 'week', label: 'This Week' },
-    { id: 'month', label: 'This Month' },
-    { id: 'year', label: 'This Year' },
-  ];
-
-  const getCategoryColor = (category) => {
-    const found = categories.find(c => c.id === category);
-    return found?.color || colors.primary[500];
-  };
-
-  const getCategoryIcon = (category) => {
-    const found = categories.find(c => c.id === category);
-    return found?.icon || 'receipt';
-  };
-
-  const totalAmount = receipts.reduce((sum, r) => sum + (r.amount || 0), 0);
-  const totalGST = receipts.reduce((sum, r) => sum + (r.gst || 0), 0);
-  const verifiedCount = receipts.filter(r => r.status === 'verified').length;
-  const pendingCount = receipts.filter(r => r.status === 'pending').length;
-
-  const FilterModal = () => (
-    <Modal
-      visible={showFilterModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowFilterModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filter & Sort</Text>
-            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Icon name="close" size={24} color={colors.gray[400]} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Sort By */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>SORT BY</Text>
-              {sortOptions.map(option => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={styles.sortOption}
-                  onPress={() => setSortBy(option.id)}
-                >
-                  <Text style={styles.sortOptionText}>{option.label}</Text>
-                  {sortBy === option.id && (
-                    <Icon name="check" size={20} color={colors.primary[500]} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Date Range */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>DATE RANGE</Text>
-              <View style={styles.dateRangeContainer}>
-                {dateRanges.map(range => (
-                  <TouchableOpacity
-                    key={range.id}
-                    style={[
-                      styles.dateRangeChip,
-                      dateRange === range.id ? styles.dateRangeChipSelected : styles.dateRangeChipUnselected
-                    ]}
-                    onPress={() => setDateRange(range.id)}
-                  >
-                    <Text style={[
-                      styles.dateRangeText,
-                      dateRange === range.id ? styles.dateRangeTextSelected : styles.dateRangeTextUnselected
-                    ]}>
-                      {range.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Apply Button */}
-            <Button
-              variant="primary"
-              onPress={() => setShowFilterModal(false)}
-              style={styles.applyButton}
-            >
-              Apply Filters
-            </Button>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+  const totalAmount = useMemo(
+    () => filteredReceipts.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    [filteredReceipts]
   );
 
-  const renderReceiptItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('ReceiptDetail', { id: item.id })}
-      onLongPress={() => {
-        Alert.alert(
-          'Delete Receipt',
-          'Are you sure you want to delete this receipt?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => deleteMutation.mutate(item.id),
-            },
-          ]
-        );
-      }}
-      style={styles.receiptCard}
-    >
-      <View style={styles.receiptCardContent}>
-        <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(item.category) + '20' }]}>
-          <Icon name={getCategoryIcon(item.category)} size={24} color={getCategoryColor(item.category)} />
-        </View>
+  const handleOpenCategory = (category) => {
+    navigation.navigate('AddReceipt', { category });
+  };
 
-        <View style={styles.receiptInfo}>
-          <View style={styles.receiptHeader}>
-            <Text style={styles.vendorName}>{item.vendor || 'Unknown'}</Text>
-            <Badge status={item.status || 'pending'} />
-          </View>
-
-          <View style={styles.receiptDetails}>
-            <Text style={styles.receiptDate}>
-              {item.date ? new Date(item.date).toLocaleDateString() : 'No date'}
-            </Text>
-            <View style={styles.amountContainer}>
-              <Text style={styles.amount}>${(item.amount || 0).toFixed(2)}</Text>
-              {item.gst > 0 && (
-                <Text style={styles.gstText}>GST: ${item.gst.toFixed(2)}</Text>
-              )}
-            </View>
-          </View>
-
-          {item.notes && (
-            <Text style={styles.notes} numberOfLines={1}>{item.notes}</Text>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  if (isLoading && !receipts.length) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title="Receipts" showBack />
-        <View style={styles.loadingContainer}>
-          <Text>Loading receipts...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const handleViewReceipt = (receipt) => {
+    navigation.navigate('ReceiptDetail', { receiptId: receipt.id, receipt });
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header 
-        title="Receipts" 
-        showBack 
-        rightIcon="plus"
-        onRightPress={() => navigation.navigate('Camera')}
-      />
-
-      {/* Search and Filter Bar */}
-      <View style={styles.searchFilterBar}>
-        <View style={styles.searchContainer}>
-          <Icon name="magnify" size={20} color={colors.gray[400]} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search receipts..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor={colors.gray[400]}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={16} color={colors.gray[400]} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowFilterModal(true)}
-        >
-          <Icon name="tune" size={24} color={colors.white} />
-          {(selectedCategory !== 'all' || dateRange !== 'all' || sortBy !== 'date-desc') && (
-            <View style={styles.filterBadge} />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Categories Scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesScroll}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        {categories.map(cat => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[
-              styles.categoryChip,
-              selectedCategory === cat.id ? styles.categoryChipSelected : styles.categoryChipUnselected
-            ]}
-            onPress={() => setSelectedCategory(cat.id)}
-          >
-            <Icon 
-              name={cat.icon} 
-              size={16} 
-              color={selectedCategory === cat.id ? colors.white : colors.gray[600]} 
-            />
-            <Text style={[
-              styles.categoryChipText,
-              selectedCategory === cat.id ? styles.categoryChipTextSelected : styles.categoryChipTextUnselected
-            ]}>
-              {cat.label}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Receipts & Expense Uploads</Text>
+            <Text style={styles.subtitle}>
+              Track business, work, and gig receipts separately from tax slips.
             </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('AddReceipt')}
+          >
+            <Icon name="plus" size={18} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        </View>
 
-      {/* Stats Summary */}
-      <View style={styles.statsBar}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Total</Text>
-          <Text style={[styles.statValue, styles.totalValue]}>
-            ${totalAmount.toFixed(2)}
-          </Text>
+        <View style={styles.helperCard}>
+          <Icon name="information-outline" size={22} color="#1D4ED8" />
+          <View style={styles.helperContent}>
+            <Text style={styles.helperTitle}>Receipts vs Documents</Text>
+            <Text style={styles.helperText}>
+              T4, T4A, RRSP, FHSA, and T5 belong in Documents. Fuel, meals,
+              maintenance, mobile bills, and parking belong here.
+            </Text>
+          </View>
         </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>GST/HST</Text>
-          <Text style={[styles.statValue, styles.gstValue]}>
-            ${totalGST.toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Verified</Text>
-          <Text style={[styles.statValue, styles.verifiedValue]}>
-            {verifiedCount}
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Pending</Text>
-          <Text style={[styles.statValue, styles.pendingValue]}>
-            {pendingCount}
-          </Text>
-        </View>
-      </View>
 
-      {/* Receipts List */}
-      {receipts.length > 0 ? (
-        <FlatList
-          data={receipts}
-          renderItem={renderReceiptItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Receipts</Text>
+            <Text style={styles.statValue}>{filteredReceipts.length}</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Tracked Amount</Text>
+            <Text style={styles.statValue}>{formatCurrency(totalAmount)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.searchBox}>
+          <Icon name="magnify" size={20} color="#64748B" />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search receipts"
+            placeholderTextColor="#94A3B8"
+            style={styles.searchInput}
+          />
+        </View>
+
+        <ScrollView
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      ) : (
-        <EmptyState
-          icon="receipt"
-          title="No receipts found"
-          message={searchQuery || selectedCategory !== 'all' 
-            ? "Try adjusting your filters" 
-            : "Start by scanning your first receipt"}
-          buttonText="Scan Receipt"
-          onButtonPress={() => navigation.navigate('Camera')}
-        />
-      )}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Text style={styles.sectionTitle}>Categories</Text>
 
-      <FilterModal />
-      <BottomNav />
+          <View style={styles.categoryList}>
+            {receiptCategories.map((category) => (
+              <TouchableOpacity
+                key={category.key}
+                style={styles.categoryCard}
+                onPress={() => handleOpenCategory(category)}
+              >
+                <View style={styles.categoryIconWrap}>
+                  <Icon name={category.icon} size={24} color="#1D4ED8" />
+                </View>
+
+                <View style={styles.categoryTextWrap}>
+                  <Text style={styles.categoryLabel}>{category.label}</Text>
+                  <Text style={styles.categoryDescription}>
+                    {category.description}
+                  </Text>
+                </View>
+
+                <Icon name="chevron-right" size={22} color="#94A3B8" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.sectionTitle}>Recent Receipts</Text>
+
+          {filteredReceipts.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Icon name="receipt-outline" size={34} color="#94A3B8" />
+              <Text style={styles.emptyTitle}>No receipts found</Text>
+              <Text style={styles.emptyText}>
+                Add your first receipt or try another search.
+              </Text>
+            </View>
+          ) : (
+            filteredReceipts.map((receipt) => {
+              const category = receiptCategories.find((c) => c.key === receipt.category);
+
+              return (
+                <TouchableOpacity
+                  key={receipt.id}
+                  style={styles.receiptCard}
+                  onPress={() => handleViewReceipt(receipt)}
+                >
+                  <View style={styles.receiptIconWrap}>
+                    <Icon
+                      name={category?.icon || 'receipt-outline'}
+                      size={20}
+                      color="#0F172A"
+                    />
+                  </View>
+
+                  <View style={styles.receiptContent}>
+                    <Text style={styles.receiptTitle}>{receipt.title}</Text>
+                    <Text style={styles.receiptMeta}>
+                      {category?.label || 'Other'} • {receipt.date}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.receiptAmount}>
+                    {formatCurrency(receipt.amount)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
 
+export default ReceiptsScreen;
+
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchFilterBar: {
+  header: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
   },
-  searchContainer: {
+  headerContent: {
     flex: 1,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#475569',
+  },
+  addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray[50],
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    marginRight: spacing.sm,
+    gap: 6,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  helperCard: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  helperContent: {
+    flex: 1,
+  },
+  helperTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E3A8A',
+    marginBottom: 4,
+  },
+  helperText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#1E40AF',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    ...typography.body,
-    color: colors.text.primary,
-  },
-  filterButton: {
-    width: 48,
     height: 48,
-    backgroundColor: colors.primary[500],
-    borderRadius: borderRadius.md,
+    marginLeft: 8,
+    color: '#0F172A',
+    fontSize: 14,
+  },
+  scrollContent: {
+    paddingBottom: 28,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  categoryList: {
+    marginBottom: 24,
+  },
+  categoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
+  },
+  categoryTextWrap: {
+    flex: 1,
+  },
+  categoryLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  categoryDescription: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  filterBadge: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.warning,
-    borderWidth: 2,
-    borderColor: colors.white,
+  emptyTitle: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
   },
-  categoriesScroll: {
-    backgroundColor: colors.white,
-    paddingVertical: spacing.sm,
-  },
-  categoriesContent: {
-    paddingHorizontal: spacing.lg,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    borderRadius: borderRadius.full,
-  },
-  categoryChipSelected: {
-    backgroundColor: colors.primary[500],
-  },
-  categoryChipUnselected: {
-    backgroundColor: colors.gray[100],
-  },
-  categoryChipText: {
-    marginLeft: spacing.xs,
-    fontSize: typography.sizes.sm,
-  },
-  categoryChipTextSelected: {
-    color: colors.white,
-  },
-  categoryChipTextUnselected: {
-    color: colors.gray[600],
-  },
-  statsBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statLabel: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  statValue: {
-    ...typography.h5,
-  },
-  totalValue: {
-    color: colors.primary[500],
-  },
-  gstValue: {
-    color: colors.success,
-  },
-  verifiedValue: {
-    color: colors.success,
-  },
-  pendingValue: {
-    color: colors.warning,
-  },
-  listContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl * 2,
+  emptyText: {
+    marginTop: 6,
+    fontSize: 13,
+    textAlign: 'center',
+    color: '#64748B',
   },
   receiptCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  receiptCardContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
+  receiptIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
+    marginRight: 12,
   },
-  receiptInfo: {
+  receiptContent: {
     flex: 1,
   },
-  receiptHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
+  receiptTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
   },
-  vendorName: {
-    ...typography.body,
-    fontWeight: typography.weights.medium,
-    color: colors.text.primary,
-    flex: 1,
+  receiptMeta: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#64748B',
   },
-  receiptDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  receiptDate: {
-    ...typography.caption,
-    color: colors.text.secondary,
-  },
-  amountContainer: {
-    alignItems: 'flex-end',
-  },
-  amount: {
-    ...typography.body,
-    fontWeight: typography.weights.semibold,
-    color: colors.text.primary,
-  },
-  gstText: {
-    ...typography.caption,
-    color: colors.gray[400],
-    marginTop: 2,
-  },
-  notes: {
-    ...typography.caption,
-    color: colors.gray[400],
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    padding: spacing.lg,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalTitle: {
-    ...typography.h5,
-    color: colors.text.primary,
-  },
-  filterSection: {
-    marginBottom: spacing.lg,
-  },
-  filterSectionTitle: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-  },
-  sortOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  sortOptionText: {
-    ...typography.body,
-    color: colors.text.primary,
-  },
-  dateRangeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  dateRangeChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-  },
-  dateRangeChipSelected: {
-    backgroundColor: colors.primary[500],
-  },
-  dateRangeChipUnselected: {
-    backgroundColor: colors.gray[100],
-  },
-  dateRangeText: {
-    fontSize: typography.sizes.sm,
-  },
-  dateRangeTextSelected: {
-    color: colors.white,
-  },
-  dateRangeTextUnselected: {
-    color: colors.text.secondary,
-  },
-  applyButton: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
+  receiptAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginLeft: 12,
   },
 });
-
-export default ReceiptsScreen;
-
-
-
-
-
-
-

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -6,9 +6,13 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Animated,
+  Easing,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '@/features/auth/context/AuthContext';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const normalizeBoolean = (value) => {
   if (typeof value === 'boolean') return value;
@@ -39,9 +43,12 @@ const buildPersonProfile = (raw = {}) => {
   const gigWork =
     normalizeBoolean(taxProfile.gigWork) ||
     normalizeBoolean(taxProfile.selfEmployed) ||
+    normalizeBoolean(taxProfile.selfEmployment) ||
     normalizeBoolean(raw?.gigWork) ||
     normalizeBoolean(raw?.selfEmployed) ||
+    normalizeBoolean(raw?.selfEmployment) ||
     incomeSet.has('gig') ||
+    incomeSet.has('gig-work') ||
     incomeSet.has('gig work') ||
     incomeSet.has('self-employed') ||
     incomeSet.has('self employed') ||
@@ -51,7 +58,9 @@ const buildPersonProfile = (raw = {}) => {
 
   const business =
     normalizeBoolean(taxProfile.business) ||
+    normalizeBoolean(taxProfile.incorporatedBusiness) ||
     normalizeBoolean(raw?.business) ||
+    normalizeBoolean(raw?.incorporatedBusiness) ||
     normalizeBoolean(businessInfo?.hasBusiness) ||
     normalizeBoolean(businessInfo?.isBusinessOwner) ||
     incomeSet.has('business') ||
@@ -80,12 +89,23 @@ const buildPersonProfile = (raw = {}) => {
 };
 
 const buildHouseholdProfile = (rawUser = {}) => {
-  const spouseRaw = rawUser?.spouse || {};
-  const hasSpouse = !!(
-    rawUser?.spouse &&
-    typeof rawUser.spouse === 'object' &&
-    Object.keys(rawUser.spouse).length > 0
-  );
+  const spouseRaw =
+    rawUser?.spouse ||
+    rawUser?.spouseInfo ||
+    (rawUser?.taxProfile?.spouseTaxProfile
+      ? {
+          taxProfile: rawUser.taxProfile.spouseTaxProfile,
+          incomeSources: rawUser.taxProfile.spouseIncomeSources || [],
+        }
+      : {});
+
+  const hasSpouse =
+    normalizeBoolean(rawUser?.taxProfile?.spouse) ||
+    !!(
+      spouseRaw &&
+      typeof spouseRaw === 'object' &&
+      Object.keys(spouseRaw).length > 0
+    );
 
   return {
     user: buildPersonProfile(rawUser),
@@ -105,201 +125,61 @@ const DashboardScreen = ({ navigation }) => {
     user?.fullName?.split?.(' ')?.[0] ||
     'Gaurav';
 
-  const dashboardMeta = useMemo(() => {
-    const requiredMissing = [];
-    const savingsOpportunities = [];
-    const completedItems = [];
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const heroTranslate = useRef(new Animated.Value(16)).current;
+  const contentTranslate = useRef(new Animated.Value(24)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
-    if (profile.user.employment) {
-      requiredMissing.push({
-        title: 'T4 Employment Income',
-        subtitle: 'Required',
-        icon: 'briefcase-outline',
-        routeName: 'UploadT4',
-      });
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 360,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(heroTranslate, {
+        toValue: 0,
+        duration: 420,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslate, {
+        toValue: 0,
+        duration: 500,
+        delay: 50,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1400,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    pulseLoop.start();
+    return () => pulseLoop.stop();
+  }, [contentTranslate, fadeAnim, heroTranslate, pulseAnim]);
+
+  const navigateTo = (routeName, params = {}) => {
+    if (!routeName) return;
+    try {
+      navigation.navigate(routeName, params);
+    } catch (error) {
+      console.log('Navigation error:', routeName, error);
     }
-
-    if (profile.user.gigWork) {
-      requiredMissing.push({
-        title: 'Gig Income Records',
-        subtitle: 'T4A, annual summaries, invoices',
-        icon: 'cash-multiple',
-        routeName: 'Documents',
-        params: { category: 'gig-income' },
-      });
-    }
-
-    if (profile.user.business) {
-      requiredMissing.push({
-        title: 'Business Records',
-        subtitle: 'Sales, expenses, payroll, rent',
-        icon: 'office-building-outline',
-        routeName: 'Documents',
-        params: { category: 'business' },
-      });
-    }
-
-    if (profile.user.rrsp) {
-      savingsOpportunities.push({
-        title: 'RRSP Contributions',
-        subtitle: 'Contribution slips and deduction records',
-        icon: 'bank-outline',
-        routeName: 'Documents',
-        params: { category: 'rrsp' },
-        status: 'Enabled',
-      });
-    } else {
-      savingsOpportunities.push({
-        title: 'RRSP Contributions',
-        subtitle: 'Can lower your taxable income',
-        icon: 'bank-outline',
-        routeName: 'Documents',
-        params: { category: 'rrsp' },
-        status: 'Optional',
-      });
-    }
-
-    if (profile.user.fhsa || !profile.user.unemployed) {
-      savingsOpportunities.push({
-        title: 'FHSA Contributions',
-        subtitle: 'Useful for first-home buyers',
-        icon: 'home-plus-outline',
-        routeName: 'Documents',
-        params: { category: 'fhsa' },
-        status: profile.user.fhsa ? 'Enabled' : 'Optional',
-      });
-    }
-
-    if (profile.user.donations || !profile.user.unemployed) {
-      savingsOpportunities.push({
-        title: 'Donations',
-        subtitle: 'May increase your refund',
-        icon: 'gift-outline',
-        routeName: 'Documents',
-        params: { category: 'donations' },
-        status: profile.user.donations ? 'Enabled' : 'Optional',
-      });
-    }
-
-    if (profile.user.investments || profile.user.tfsa) {
-      savingsOpportunities.push({
-        title: 'Investments',
-        subtitle: 'T5s and account statements',
-        icon: 'chart-line',
-        routeName: 'Documents',
-        params: { category: 'investments' },
-        status: 'Enabled',
-      });
-    }
-
-    completedItems.push({
-      name: 'Profile Information',
-      date: 'Completed',
-      icon: 'account-check-outline',
-      routeName: 'Profile',
-    });
-
-    if (profile.hasSpouse) {
-      completedItems.push({
-        name: 'Household Setup',
-        date: 'Spouse added',
-        icon: 'account-heart-outline',
-        routeName: 'Profile',
-      });
-    }
-
-    if (profile.user.employment) {
-      completedItems.push({
-        name: 'Employment Profile',
-        date: 'Income source selected',
-        icon: 'briefcase-check-outline',
-        routeName: 'Profile',
-      });
-    }
-
-    const quickActions = [
-      profile.user.employment && {
-        title: 'Upload T4',
-        subtitle: 'Required to continue',
-        icon: 'file-document-outline',
-        routeName: 'UploadT4',
-        primary: true,
-      },
-      profile.user.gigWork && {
-        title: 'Gig Income',
-        subtitle: 'T4A and summaries',
-        icon: 'cash-multiple',
-        routeName: 'Documents',
-        params: { category: 'gig-income' },
-      },
-      (profile.user.gigWork || profile.user.business) && {
-        title: 'Add Receipts',
-        subtitle: 'Track expense proofs',
-        icon: 'receipt-outline',
-        routeName: 'Documents',
-        params: { category: 'receipts' },
-      },
-      profile.user.gigWork && {
-        title: 'Mileage',
-        subtitle: 'Track business driving',
-        icon: 'map-marker-distance',
-        routeName: 'MileageTracker',
-      },
-      {
-        title: 'RRSP',
-        subtitle: 'Add contribution slips',
-        icon: 'bank-outline',
-        routeName: 'Documents',
-        params: { category: 'rrsp' },
-      },
-      {
-        title: 'Donations',
-        subtitle: 'Claim tax credits',
-        icon: 'hand-heart-outline',
-        routeName: 'Documents',
-        params: { category: 'donations' },
-      },
-    ].filter(Boolean);
-
-    const checklist = [
-      { label: 'Complete profile setup', done: true, routeName: 'Profile' },
-      {
-        label: profile.user.employment ? 'Upload T4' : 'Review income profile',
-        done: false,
-        routeName: profile.user.employment ? 'UploadT4' : 'Profile',
-      },
-      {
-        label: 'Add supporting tax documents',
-        done: false,
-        routeName: 'Documents',
-      },
-      {
-        label: 'Upload receipts and expenses',
-        done: !(profile.user.gigWork || profile.user.business),
-        routeName: 'Documents',
-        params: { category: 'receipts' },
-      },
-      {
-        label: 'Review tax checklist',
-        done: false,
-        routeName: 'Checklist',
-      },
-    ];
-
-    return {
-      requiredMissing,
-      savingsOpportunities,
-      completedItems,
-      quickActions,
-      checklist,
-    };
-  }, [profile]);
-
-  const progress = useMemo(() => {
-    const total = dashboardMeta.checklist.length || 1;
-    const done = dashboardMeta.checklist.filter((item) => item.done).length;
-    return Math.max(20, Math.round((done / total) * 100));
-  }, [dashboardMeta]);
+  };
 
   const openDrawer = () => {
     if (typeof navigation?.openDrawer === 'function') {
@@ -319,16 +199,6 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
-  const navigateTo = (routeName, params = {}) => {
-    if (!routeName) return;
-
-    try {
-      navigation.navigate(routeName, params);
-    } catch (error) {
-      console.log('Navigation error:', routeName, error);
-    }
-  };
-
   const profileLabel = useMemo(() => {
     const labels = [];
 
@@ -336,313 +206,443 @@ const DashboardScreen = ({ navigation }) => {
     if (profile.user.gigWork) labels.push('Self-Employed');
     if (profile.user.business) labels.push('Business Owner');
     if (profile.user.unemployed && labels.length === 0) labels.push('Unemployed');
-
     if (profile.hasSpouse) labels.push('With Spouse');
 
-    return `${labels.join(' • ')} Tax Profile`;
+    return `${labels.join(' • ')} • 2025 Return`;
   }, [profile]);
+
+  const dashboardMeta = useMemo(() => {
+    const missingItems = [];
+    const summaryRows = [];
+    const quickActions = [];
+    const completionCountBase = [];
+
+    if (profile.user.employment) {
+      missingItems.push({
+        title: 'Upload your T4 slip',
+        subtitle: 'Employment income document is still needed',
+        icon: 'briefcase-outline',
+        routeName: 'UploadT4',
+        tone: 'danger',
+      });
+    }
+
+    if (profile.user.gigWork) {
+      missingItems.push({
+        title: 'Upload your T4A income',
+        subtitle: 'Add self-employment or gig income',
+        icon: 'cash-multiple',
+        routeName: 'UploadT4A',
+        tone: 'warning',
+      });
+
+      missingItems.push({
+        title: 'Add mileage or expense support',
+        subtitle: 'Needed for gig-work claims',
+        icon: 'map-marker-distance',
+        routeName: 'MileageTracker',
+        tone: 'warning',
+      });
+    }
+
+    if (profile.user.business) {
+      missingItems.push({
+        title: 'Add business income records',
+        subtitle: 'Sales, expense, and tax support documents',
+        icon: 'office-building-outline',
+        routeName: 'IncomeDocuments',
+        tone: 'danger',
+      });
+    }
+
+    if (profile.hasSpouse && profile.spouse.employment) {
+      missingItems.push({
+        title: 'Upload spouse employment documents',
+        subtitle: 'Spouse T4 and related records still needed',
+        icon: 'account-heart-outline',
+        routeName: 'UploadChecklist',
+        params: { filter: 'spouse' },
+        tone: 'danger',
+      });
+    }
+
+    quickActions.push(
+      {
+        title: 'Uploads',
+        icon: 'file-check-outline',
+        routeName: 'UploadChecklist',
+      },
+      {
+        title: 'Receipts',
+        icon: 'receipt-outline',
+        routeName: 'Receipts',
+      },
+      {
+        title: 'Mileage',
+        icon: 'map-marker-distance',
+        routeName: 'MileageTracker',
+      },
+      {
+        title: 'Documents',
+        icon: 'folder-outline',
+        routeName: 'Documents',
+      }
+    );
+
+    if (profile.user.rrsp || !profile.user.unemployed) {
+      summaryRows.push({
+        label: 'RRSP',
+        value: profile.user.rrsp ? 'Active' : 'Optional',
+        icon: 'bank-outline',
+        routeName: 'UploadRRSPReceipt',
+      });
+    }
+
+    if (profile.user.fhsa || !profile.user.unemployed) {
+      summaryRows.push({
+        label: 'FHSA',
+        value: profile.user.fhsa ? 'Active' : 'Optional',
+        icon: 'home-plus-outline',
+        routeName: 'UploadFHSA',
+      });
+    }
+
+    if (profile.user.donations || !profile.user.unemployed) {
+      summaryRows.push({
+        label: 'Donations',
+        value: profile.user.donations ? 'Active' : 'Optional',
+        icon: 'hand-heart-outline',
+        routeName: 'UploadDonation',
+      });
+    }
+
+    if (profile.user.investments || profile.user.tfsa) {
+      summaryRows.push({
+        label: 'Investments',
+        value: 'Active',
+        icon: 'chart-line',
+        routeName: 'UploadT5',
+      });
+    }
+
+    completionCountBase.push('Profile');
+
+    if (profile.hasSpouse) completionCountBase.push('Household');
+    if (profile.user.rrsp) completionCountBase.push('RRSP');
+    if (profile.user.fhsa) completionCountBase.push('FHSA');
+
+    return {
+      missingItems: missingItems.slice(0, 3),
+      summaryRows: summaryRows.slice(0, 4),
+      quickActions: quickActions,
+      readyCount: completionCountBase.length,
+    };
+  }, [profile]);
+
+  const statusPercent = useMemo(() => {
+    let total = 2;
+    let done = 1;
+
+    if (profile.user.employment) total += 1;
+    if (profile.user.gigWork) total += 1;
+    if (profile.user.business) total += 1;
+    if (profile.hasSpouse) total += 1;
+    if (profile.user.rrsp) total += 1;
+    if (profile.user.fhsa) total += 1;
+    if (profile.user.investments) total += 1;
+
+    if (profile.user.rrsp) done += 1;
+    if (profile.user.fhsa) done += 1;
+    if (profile.user.investments) done += 1;
+
+    return Math.max(18, Math.min(92, Math.round((done / total) * 100)));
+  }, [profile]);
+
+  const missingCount = dashboardMeta.missingItems.length;
+  const hasAssignedCA = !!user?.assignedCA;
+  const assignedCAName = user?.assignedCA?.name || 'Your CA';
+
+  const caCardData = useMemo(() => {
+    if (hasAssignedCA) {
+      return {
+        title: assignedCAName,
+        subtitle: 'Chat, request review, or book an appointment',
+        icon: 'account-tie-outline',
+        routeName: 'CAHub',
+        buttonLabel: 'Open CA Hub',
+      };
+    }
+
+    return {
+      title: 'Find a Chartered Accountant',
+      subtitle: 'Compare pricing, specialties, and available consultation times',
+      icon: 'account-search-outline',
+      routeName: 'CAHub',
+      buttonLabel: 'Browse CAs',
+    };
+  }, [assignedCAName, hasAssignedCA]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerRow}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <Animated.View
+          style={[
+            styles.headerRow,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: heroTranslate }],
+            },
+          ]}
+        >
           <TouchableOpacity style={styles.menuButton} onPress={openDrawer}>
             <Icon name="menu" size={24} color="#0F172A" />
           </TouchableOpacity>
 
           <View style={styles.headerTextWrap}>
             <Text style={styles.greeting}>Good evening, {firstName}</Text>
-            <Text style={styles.profileTag}>{profileLabel} • 2025 Return</Text>
+            <Text style={styles.profileTag}>{profileLabel}</Text>
           </View>
 
           <TouchableOpacity style={styles.bellButton}>
             <Icon name="bell-outline" size={22} color="#0F172A" />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        <View style={styles.heroCard}>
+        <Animated.View
+          style={[
+            styles.heroCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: heroTranslate }],
+            },
+          ]}
+        >
           <View style={styles.heroTopRow}>
             <View style={styles.heroBadge}>
-              <Icon name="chart-line" size={16} color="#2563EB" />
-              <Text style={styles.heroBadgeText}>Filing Progress</Text>
+              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                <Icon name="star-four-points-circle-outline" size={16} color="#2563EB" />
+              </Animated.View>
+              <Text style={styles.heroBadgeText}>2025 return</Text>
             </View>
-            <Text style={styles.heroPercent}>{progress}%</Text>
+
+            <Text style={styles.heroPercent}>{statusPercent}%</Text>
           </View>
 
-          <Text style={styles.heroTitle}>Your dashboard is now profile-driven</Text>
+          <Text style={styles.heroTitle}>Your return is in progress</Text>
           <Text style={styles.heroSubtitle}>
-            Actions change based on employment, self-employment, business, spouse,
-            and optional tax categories like RRSP, FHSA, donations, and investments.
+            Complete the remaining uploads, review your tax summary, and move toward filing.
           </Text>
 
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress}%` }]} />
-          </View>
-
           <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatBox}>
-              <Text style={styles.heroStatValue}>{dashboardMeta.requiredMissing.length}</Text>
-              <Text style={styles.heroStatLabel}>Required Items</Text>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{missingCount}</Text>
+              <Text style={styles.heroStatLabel}>missing items</Text>
             </View>
-            <View style={styles.heroStatBox}>
-              <Text style={styles.heroStatValue}>{dashboardMeta.savingsOpportunities.length}</Text>
-              <Text style={styles.heroStatLabel}>Tax Saving Areas</Text>
+
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{dashboardMeta.readyCount}</Text>
+              <Text style={styles.heroStatLabel}>ready sections</Text>
             </View>
-            <View style={[styles.heroStatBox, styles.heroStatBoxLast]}>
-              <Text style={styles.heroStatValue}>
-                {dashboardMeta.checklist.filter((item) => item.done).length}
-              </Text>
-              <Text style={styles.heroStatLabel}>Completed</Text>
+
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{profile.hasSpouse ? 'Family' : 'Single'}</Text>
+              <Text style={styles.heroStatLabel}>return type</Text>
             </View>
           </View>
 
           <View style={styles.heroButtonRow}>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() =>
-                navigateTo(profile.user.employment ? 'UploadT4' : 'Checklist')
-              }
+              onPress={() => navigateTo('UploadChecklist')}
             >
-              <Text style={styles.primaryButtonText}>
-                {profile.user.employment ? 'Upload T4' : 'Continue Setup'}
-              </Text>
+              <Icon name="file-check-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.primaryButtonText}>Continue Uploads</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={() => navigateTo('Checklist')}
             >
-              <Text style={styles.secondaryButtonText}>View Checklist</Text>
+              <Text style={styles.secondaryButtonText}>Checklist</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-          </View>
-
-          <View style={styles.quickGrid}>
-            {dashboardMeta.quickActions.map((item) => (
-              <TouchableOpacity
-                key={item.title}
-                style={[
-                  styles.quickCard,
-                  item.primary && styles.quickCardPrimary,
-                ]}
-                onPress={() => navigateTo(item.routeName, item.params)}
-              >
-                <View
-                  style={[
-                    styles.quickIconWrap,
-                    item.primary && styles.quickIconWrapPrimary,
-                  ]}
-                >
-                  <Icon
-                    name={item.icon}
-                    size={20}
-                    color={item.primary ? '#2563EB' : '#475569'}
-                  />
-                </View>
-
-                <Text
-                  style={[
-                    styles.quickCardTitle,
-                    item.primary && styles.quickCardTitlePrimary,
-                  ]}
-                >
-                  {item.title}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.quickCardSubtitle,
-                    item.primary && styles.quickCardSubtitlePrimary,
-                  ]}
-                >
-                  {item.subtitle}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Required Documents</Text>
-          </View>
-
-          {dashboardMeta.requiredMissing.map((doc) => (
-            <TouchableOpacity
-              key={doc.title}
-              style={styles.listCard}
-              onPress={() => navigateTo(doc.routeName, doc.params)}
-            >
-              <View style={styles.listLeft}>
-                <View style={styles.listIconWrap}>
-                  <Icon name={doc.icon} size={22} color="#2563EB" />
-                </View>
-                <View style={styles.listTextWrap}>
-                  <Text style={styles.listTitle}>{doc.title}</Text>
-                  <Text style={styles.listSubtitle}>{doc.subtitle}</Text>
-                </View>
-              </View>
-
-              <View style={styles.statusPill}>
-                <Text style={styles.statusPillText}>Open</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Ways to Save Tax</Text>
-          </View>
-
-          {dashboardMeta.savingsOpportunities.map((item) => (
-            <TouchableOpacity
-              key={item.title}
-              style={styles.savingsCard}
-              onPress={() => navigateTo(item.routeName, item.params)}
-            >
-              <View style={styles.savingsLeft}>
-                <View style={styles.savingsIconWrap}>
-                  <Icon name={item.icon} size={20} color="#0F172A" />
-                </View>
-                <View style={styles.savingsTextWrap}>
-                  <Text style={styles.savingsTitle}>{item.title}</Text>
-                  <Text style={styles.savingsSubtitle}>{item.subtitle}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.savingsStatus}>{item.status}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Tax Checklist</Text>
-          </View>
-
-          <View style={styles.checklistCard}>
-            {dashboardMeta.checklist.map((item) => (
-              <TouchableOpacity
-                key={item.label}
-                style={styles.checklistRow}
-                onPress={() => navigateTo(item.routeName, item.params)}
-              >
-                <View
-                  style={[
-                    styles.checkIcon,
-                    item.done ? styles.checkIconDone : styles.checkIconPending,
-                  ]}
-                >
-                  <Icon
-                    name={item.done ? 'check' : 'clock-outline'}
-                    size={16}
-                    color={item.done ? '#16A34A' : '#F59E0B'}
-                  />
-                </View>
-
-                <Text
-                  style={[
-                    styles.checklistText,
-                    item.done && styles.checklistTextDone,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-          </View>
-
-          {dashboardMeta.completedItems.map((item) => (
-            <TouchableOpacity
-              key={item.name}
-              style={styles.activityCard}
-              onPress={() => navigateTo(item.routeName)}
-            >
-              <View style={styles.activityLeft}>
-                <View style={styles.activityIconWrap}>
-                  <Icon name={item.icon} size={20} color="#2563EB" />
-                </View>
-                <View>
-                  <Text style={styles.activityTitle}>{item.name}</Text>
-                  <Text style={styles.activityDate}>{item.date}</Text>
-                </View>
-              </View>
-
-              <Icon name="chevron-right" size={22} color="#94A3B8" />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.summaryCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Estimated Tax Summary</Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Employment income</Text>
-            <Text style={styles.summaryValue}>
-              {profile.user.employment ? 'T4 required' : 'Not selected'}
-            </Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Self-employment</Text>
-            <Text style={styles.summaryValue}>
-              {profile.user.gigWork ? 'Active' : 'Not selected'}
-            </Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Business owner</Text>
-            <Text style={styles.summaryValue}>
-              {profile.user.business ? 'Active' : 'Not selected'}
-            </Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Optional deductions</Text>
-            <Text style={styles.summaryValue}>
-              {[
-                profile.user.rrsp && 'RRSP',
-                profile.user.fhsa && 'FHSA',
-                profile.user.donations && 'Donations',
-                profile.user.investments && 'Investments',
-              ]
-                .filter(Boolean)
-                .join(', ') || 'Not added'}
-            </Text>
-          </View>
-
-          <View style={styles.summaryDivider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryRefundLabel}>Estimated refund</Text>
-            <Text style={styles.summaryRefundValue}>Needs more data</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.bottomCta}
-          onPress={() => navigateTo('Checklist')}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: contentTranslate }],
+          }}
         >
-          <Text style={styles.bottomCtaText}>Continue to File Tax</Text>
-          <Icon name="arrow-right" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.caCard}
+            activeOpacity={0.92}
+            onPress={() => navigateTo(caCardData.routeName)}
+          >
+            <View style={styles.caLeft}>
+              <View style={styles.caIconWrap}>
+                <Icon name={caCardData.icon} size={22} color="#2563EB" />
+              </View>
+
+              <View style={styles.caTextWrap}>
+                <Text style={styles.caTitle}>{caCardData.title}</Text>
+                <Text style={styles.caSubtitle}>{caCardData.subtitle}</Text>
+              </View>
+            </View>
+
+            <View style={styles.caRight}>
+              <Text style={styles.caLink}>{caCardData.buttonLabel}</Text>
+              <Icon name="chevron-right" size={20} color="#94A3B8" />
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Still Required</Text>
+              <TouchableOpacity onPress={() => navigateTo('UploadChecklist')}>
+                <Text style={styles.sectionLink}>View all</Text>
+              </TouchableOpacity>
+            </View>
+
+            {dashboardMeta.missingItems.length === 0 ? (
+              <View style={styles.emptyStateCard}>
+                <View style={styles.emptyStateIconWrap}>
+                  <Icon name="check-circle-outline" size={22} color="#16A34A" />
+                </View>
+                <View style={styles.emptyStateTextWrap}>
+                  <Text style={styles.emptyStateTitle}>No urgent items right now</Text>
+                  <Text style={styles.emptyStateText}>
+                    Your dashboard will highlight missing documents here.
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              dashboardMeta.missingItems.map((item, index) => (
+                <AnimatedTouchable
+                  key={item.title}
+                  activeOpacity={0.9}
+                  style={[
+                    styles.missingCard,
+                    index === 0 && styles.missingCardPriority,
+                  ]}
+                  onPress={() => navigateTo(item.routeName, item.params)}
+                >
+                  <View style={styles.missingLeft}>
+                    <View
+                      style={[
+                        styles.missingIconWrap,
+                        item.tone === 'danger'
+                          ? styles.missingIconWrapDanger
+                          : styles.missingIconWrapWarning,
+                      ]}
+                    >
+                      <Icon
+                        name={item.icon}
+                        size={20}
+                        color={item.tone === 'danger' ? '#DC2626' : '#D97706'}
+                      />
+                    </View>
+
+                    <View style={styles.missingTextWrap}>
+                      <Text style={styles.missingTitle}>{item.title}</Text>
+                      <Text style={styles.missingSubtitle}>{item.subtitle}</Text>
+                    </View>
+                  </View>
+
+                  <Icon name="chevron-right" size={20} color="#94A3B8" />
+                </AnimatedTouchable>
+              ))
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+            </View>
+
+            <View style={styles.quickActionsRow}>
+              {dashboardMeta.quickActions.map((item) => (
+                <TouchableOpacity
+                  key={item.title}
+                  style={styles.quickPill}
+                  activeOpacity={0.88}
+                  onPress={() => navigateTo(item.routeName, item.params)}
+                >
+                  <View style={styles.quickPillIconWrap}>
+                    <Icon name={item.icon} size={18} color="#2563EB" />
+                  </View>
+                  <Text style={styles.quickPillText}>{item.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Tax Summary</Text>
+            </View>
+
+            <View style={styles.summaryCard}>
+              <TouchableOpacity
+                style={styles.summaryRow}
+                onPress={() => navigateTo('IncomeSummary')}
+              >
+                <View style={styles.summaryLeft}>
+                  <Icon name="chart-box-outline" size={18} color="#475569" />
+                  <Text style={styles.summaryLabel}>Income summary</Text>
+                </View>
+                <Text style={styles.summaryValue}>Open</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.summaryRow}
+                onPress={() => navigateTo('DeductionSummary')}
+              >
+                <View style={styles.summaryLeft}>
+                  <Icon name="calculator-variant-outline" size={18} color="#475569" />
+                  <Text style={styles.summaryLabel}>Deduction summary</Text>
+                </View>
+                <Text style={styles.summaryValue}>Open</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.summaryRow}
+                onPress={() => navigateTo('RefundEstimate')}
+              >
+                <View style={styles.summaryLeft}>
+                  <Icon name="cash-refund" size={18} color="#475569" />
+                  <Text style={styles.summaryLabel}>Refund estimate</Text>
+                </View>
+                <Text style={styles.summaryValue}>Needs data</Text>
+              </TouchableOpacity>
+
+              {!!dashboardMeta.summaryRows.length && <View style={styles.summaryDivider} />}
+
+              {dashboardMeta.summaryRows.map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={styles.summaryRow}
+                  onPress={() => navigateTo(item.routeName)}
+                >
+                  <View style={styles.summaryLeft}>
+                    <Icon name={item.icon} size={18} color="#475569" />
+                    <Text style={styles.summaryLabel}>{item.label}</Text>
+                  </View>
+                  <Text style={styles.summaryMutedValue}>{item.value}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.bottomCta}
+            activeOpacity={0.9}
+            onPress={() => navigateTo('UploadChecklist')}
+          >
+            <Icon name="arrow-top-right" size={18} color="#FFFFFF" />
+            <Text style={styles.bottomCtaText}>Continue to File Tax</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -653,440 +653,417 @@ export default DashboardScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FB',
   },
+
   container: {
-    padding: 20,
-    paddingBottom: 36,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 32,
   },
+
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 22,
+    marginBottom: 18,
   },
+
   menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5EAF2',
   },
+
+  bellButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+  },
+
   headerTextWrap: {
     flex: 1,
     marginHorizontal: 14,
   },
+
   greeting: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
     color: '#0F172A',
+    letterSpacing: -0.7,
   },
+
   profileTag: {
     marginTop: 4,
     fontSize: 14,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  bellButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
+
   heroCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    padding: 20,
-    marginBottom: 22,
+    padding: 22,
+    marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5EAF2',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.06,
     shadowRadius: 20,
     elevation: 4,
   },
+
   heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#EEF4FF',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
+
   heroBadgeText: {
     color: '#2563EB',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 12,
-    marginLeft: 6,
+    marginLeft: 7,
   },
+
   heroPercent: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
     color: '#0F172A',
+    letterSpacing: -1,
   },
+
   heroTitle: {
-    marginTop: 16,
-    fontSize: 22,
-    fontWeight: '800',
+    marginTop: 18,
+    fontSize: 26,
+    lineHeight: 31,
+    fontWeight: '900',
     color: '#0F172A',
+    letterSpacing: -0.8,
   },
+
   heroSubtitle: {
     marginTop: 8,
     fontSize: 14,
     lineHeight: 22,
     color: '#64748B',
+    fontWeight: '500',
   },
-  progressTrack: {
-    height: 10,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 999,
-    marginTop: 18,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#2563EB',
-    borderRadius: 999,
-  },
+
   heroStatsRow: {
     flexDirection: 'row',
     marginTop: 18,
+    gap: 10,
   },
-  heroStatBox: {
+
+  heroStatCard: {
     flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 18,
     paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginRight: 10,
+    borderColor: '#E5EAF2',
+    alignItems: 'center',
   },
-  heroStatBoxLast: {
-    marginRight: 0,
-  },
+
   heroStatValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 19,
+    fontWeight: '900',
     color: '#0F172A',
   },
+
   heroStatLabel: {
     marginTop: 4,
     fontSize: 12,
     color: '#64748B',
-    lineHeight: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
+
   heroButtonRow: {
     flexDirection: 'row',
     marginTop: 18,
   },
+
   primaryButton: {
     flex: 1,
+    height: 52,
     backgroundColor: '#2563EB',
     borderRadius: 16,
-    paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 6,
+    flexDirection: 'row',
   },
+
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
+    marginLeft: 8,
   },
+
   secondaryButton: {
-    flex: 1,
-    backgroundColor: '#EFF6FF',
+    width: 116,
+    height: 52,
+    backgroundColor: '#EEF4FF',
     borderRadius: 16,
-    paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: 6,
   },
+
   secondaryButtonText: {
     color: '#2563EB',
     fontSize: 15,
+    fontWeight: '900',
+  },
+
+  caCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+    marginBottom: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  caLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  caIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#EEF4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  caTextWrap: {
+    flex: 1,
+  },
+
+  caTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+
+  caSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 19,
+  },
+
+  caRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+
+  caLink: {
+    fontSize: 13,
+    color: '#2563EB',
     fontWeight: '800',
+    marginRight: 4,
   },
+
   section: {
-    marginBottom: 22,
+    marginBottom: 20,
   },
+
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  quickCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    minHeight: 132,
     marginBottom: 12,
   },
-  quickCardPrimary: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
-  },
-  quickIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  quickIconWrapPrimary: {
-    backgroundColor: '#FFFFFF',
-  },
-  quickCardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
     color: '#0F172A',
+    letterSpacing: -0.4,
   },
-  quickCardTitlePrimary: {
-    color: '#FFFFFF',
-  },
-  quickCardSubtitle: {
-    marginTop: 6,
+
+  sectionLink: {
     fontSize: 13,
-    lineHeight: 19,
-    color: '#64748B',
+    color: '#2563EB',
+    fontWeight: '800',
   },
-  quickCardSubtitlePrimary: {
-    color: '#CBD5E1',
-  },
-  listCard: {
+
+  missingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 16,
+    padding: 15,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5EAF2',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  listLeft: {
+
+  missingCardPriority: {
+    borderColor: '#DCE8FF',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+
+  missingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  listIconWrap: {
+
+  missingIconWrap: {
     width: 46,
     height: 46,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  listTextWrap: {
+
+  missingIconWrapDanger: {
+    backgroundColor: '#FEF2F2',
+  },
+
+  missingIconWrapWarning: {
+    backgroundColor: '#FFF7ED',
+  },
+
+  missingTextWrap: {
     flex: 1,
   },
-  listTitle: {
+
+  missingTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#0F172A',
   },
-  listSubtitle: {
+
+  missingSubtitle: {
     marginTop: 4,
     fontSize: 13,
     color: '#64748B',
+    lineHeight: 19,
   },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginLeft: 12,
-    backgroundColor: '#EFF6FF',
+
+  quickActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  statusPillText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#2563EB',
-  },
-  savingsCard: {
+
+  quickPill: {
+    minWidth: '47%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  savingsLeft: {
+    borderColor: '#E5EAF2',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  savingsIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
+
+  quickPillIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: '#EEF4FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginRight: 10,
   },
-  savingsTextWrap: {
-    flex: 1,
-  },
-  savingsTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+
+  quickPillText: {
+    fontSize: 14,
     color: '#0F172A',
+    fontWeight: '800',
   },
-  savingsSubtitle: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#64748B',
-  },
-  savingsStatus: {
-    marginLeft: 12,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-  checklistCard: {
+
+  summaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5EAF2',
   },
-  checklistRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 11,
-  },
-  checkIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  checkIconDone: {
-    backgroundColor: '#DCFCE7',
-  },
-  checkIconPending: {
-    backgroundColor: '#FEF3C7',
-  },
-  checklistText: {
-    fontSize: 15,
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  checklistTextDone: {
-    color: '#64748B',
-    textDecorationLine: 'line-through',
-  },
-  activityCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  activityLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activityIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  activityTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  activityDate: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#64748B',
-  },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 22,
-  },
+
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 9,
+    alignItems: 'center',
+    paddingVertical: 11,
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#64748B',
+
+  summaryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
     marginRight: 12,
   },
+
+  summaryLabel: {
+    fontSize: 14,
+    color: '#334155',
+    fontWeight: '700',
+    marginLeft: 10,
+  },
+
   summaryValue: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-    flex: 1,
-    textAlign: 'right',
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 8,
-  },
-  summaryRefundLabel: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#0F172A',
   },
-  summaryRefundValue: {
-    fontSize: 15,
+
+  summaryMutedValue: {
+    fontSize: 13,
     fontWeight: '800',
     color: '#2563EB',
   },
+
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#E5EAF2',
+    marginVertical: 6,
+  },
+
   bottomCta: {
     backgroundColor: '#2563EB',
     borderRadius: 20,
@@ -1096,10 +1073,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   bottomCtaText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
-    marginRight: 10,
+    fontWeight: '900',
+    marginLeft: 8,
+  },
+
+  emptyStateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  emptyStateIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  emptyStateTextWrap: {
+    flex: 1,
+  },
+
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+
+  emptyStateText: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#64748B',
   },
 });
