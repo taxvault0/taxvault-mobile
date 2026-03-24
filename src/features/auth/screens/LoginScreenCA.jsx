@@ -29,11 +29,6 @@ const LoginScreenCA = () => {
     setLoading(false);
 
     if (!result?.success) return;
-
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'CAStack' }],
-    });
   };
 
   const handleDemoCALogin = async () => {
@@ -44,11 +39,6 @@ const LoginScreenCA = () => {
     setLoading(false);
 
     if (!result?.success) return;
-
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'CAStack' }],
-    });
   };
 
   const goToSignup = () => {

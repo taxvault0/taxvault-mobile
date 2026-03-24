@@ -1,261 +1,257 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Header from '@/components/layout/AppHeader';
-import Card from '@/components/ui/Card';
-import { colors, typography, spacing, borderRadius } from '@/styles/theme';
 
-const DashboardScreenCA = ({ navigation }) => {
-  const quickActions = [
-    {
-      id: 'clients',
-      title: 'View Clients',
-      icon: 'account-group',
-      color: colors.primary[500],
-      screen: 'Clients',
-    },
-    {
-      id: 'documents',
-      title: 'Documents',
-      icon: 'file-document',
-      color: colors.success,
-      screen: 'Documents',
-    },
-    {
-      id: 'profile',
-      title: 'Profile',
-      icon: 'account',
-      color: colors.secondary,
-      screen: 'Profile',
-    },
-  ];
+import CAHeroCard from '@/features/ca/components/CAHeroCard';
+import PlannerTaskCard from '@/features/ca/components/PlannerTaskCard';
+import LeadRequestCard from '@/features/ca/components/LeadRequestCard';
+import ClientCard from '@/features/ca/components/ClientCard';
+import { caStats, caPlannerTasks, caRequests, caClients } from '@/features/ca/config/caMockData';
 
-  const recentClients = [
-    { id: '1', name: 'John Doe', status: 'active' },
-    { id: '2', name: 'Jane Smith', status: 'pending' },
-    { id: '3', name: 'Bob Johnson', status: 'active' },
-  ];
+const DashboardStatTile = ({ title, value, subtitle, icon, onPress }) => {
+  return (
+    <TouchableOpacity style={styles.statTile} activeOpacity={0.88} onPress={onPress}>
+      <View style={styles.statIconWrap}>
+        <Icon name={icon} size={20} color="#2563EB" />
+      </View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={styles.statSubtitle}>{subtitle}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const CADashboardScreen = () => {
+  const navigation = useNavigation();
+
+  const openDrawer = () => {
+    navigation.dispatch(DrawerActions.openDrawer());
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header title="CA Dashboard" />
-      
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Welcome Card */}
-        <Card style={styles.welcomeCard}>
-          <Text style={styles.title}>Welcome, CA!</Text>
-          <Text style={styles.subtitle}>Client management dashboard</Text>
-        </Card>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.topIconButton} activeOpacity={0.85} onPress={openDrawer}>
+            <Icon name="menu" size={24} color="#111827" />
+          </TouchableOpacity>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActions}>
-          {quickActions.map(action => (
+          <View style={styles.topBarText}>
+            <Text style={styles.screenEyebrow}>CA Workspace</Text>
+            <Text style={styles.screenTitle}>Dashboard</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.topIconButton}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('CAProfile')}
+          >
+            <Icon name="account-circle-outline" size={24} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+
+        <CAHeroCard name="Gaurav" stats={caStats} />
+
+        <View style={styles.statsGrid}>
+          <DashboardStatTile
+            title="Active Clients"
+            value={caStats.activeClients}
+            subtitle="Open client directory"
+            icon="account-group-outline"
+            onPress={() => navigation.navigate('CAClients')}
+          />
+
+          <DashboardStatTile
+            title="Pending Requests"
+            value={caStats.pendingRequests}
+            subtitle="New consultations"
+            icon="clipboard-text-clock-outline"
+            onPress={() => navigation.navigate('CARequests')}
+          />
+
+          <DashboardStatTile
+            title="Unread Messages"
+            value={caStats.unreadMessages}
+            subtitle="Client inbox"
+            icon="message-processing-outline"
+            onPress={() => navigation.navigate('CAMessages')}
+          />
+
+          <DashboardStatTile
+            title="Analytics"
+            value="View"
+            subtitle="Practice insights"
+            icon="chart-box-outline"
+            onPress={() => navigation.navigate('CAAnalytics')}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Planner</Text>
             <TouchableOpacity
-              key={action.id}
-              style={styles.actionCard}
-              onPress={() => navigation.navigate(action.screen)}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('CAPlanner')}
             >
-              <View style={[styles.actionIcon, { backgroundColor: action.color + '20' }]}>
-                <Icon name={action.icon} size={32} color={action.color} />
-              </View>
-              <Text style={styles.actionTitle}>{action.title}</Text>
+              <Text style={styles.linkText}>Open Calendar</Text>
             </TouchableOpacity>
+          </View>
+
+          {caPlannerTasks.slice(0, 3).map((task) => (
+            <PlannerTaskCard key={task.id} task={task} />
           ))}
         </View>
 
-        {/* Recent Clients */}
-        <Card style={styles.recentCard}>
-          <View style={styles.recentHeader}>
-            <Text style={styles.sectionTitle}>Recent Clients</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Clients')}>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {recentClients.map(client => (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Pending Consultation Requests</Text>
             <TouchableOpacity
-              key={client.id}
-              style={styles.clientItem}
-              onPress={() => navigation.navigate('ClientDetail', { id: client.id, name: client.name })}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('CARequests')}
             >
-              <View style={styles.clientAvatar}>
-                <Text style={styles.avatarText}>
-                  {client.name.split(' ').map(n => n[0]).join('')}
-                </Text>
-              </View>
-              <View style={styles.clientInfo}>
-                <Text style={styles.clientName}>{client.name}</Text>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: client.status === 'active' ? colors.success + '20' : colors.warning + '20' }
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    { color: client.status === 'active' ? colors.success : colors.warning }
-                  ]}>
-                    {client.status}
-                  </Text>
-                </View>
-              </View>
-              <Icon name="chevron-right" size={24} color={colors.gray[400]} />
+              <Text style={styles.linkText}>See All</Text>
             </TouchableOpacity>
-          ))}
-        </Card>
-
-        {/* Stats Card */}
-        <Card style={styles.statsCard}>
-          <Text style={styles.sectionTitle}>This Month</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Active Clients</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>24</Text>
-              <Text style={styles.statLabel}>Documents</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>3</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
           </View>
-        </Card>
+
+          {caRequests.slice(0, 2).map((request) => (
+            <LeadRequestCard
+              key={request.id}
+              request={request}
+              onPress={() => navigation.navigate('CARequestDetails', { requestId: request.id })}
+            />
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Clients</Text>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('CAClients')}
+            >
+              <Text style={styles.linkText}>Open Clients</Text>
+            </TouchableOpacity>
+          </View>
+
+          {caClients.slice(0, 3).map((client) => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              onPress={() => navigation.navigate('ClientDetail', { clientId: client.id })}
+            />
+          ))}
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
+
+export default CADashboardScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
   content: {
-    padding: spacing.lg,
+    padding: 16,
+    paddingBottom: 28,
   },
-  welcomeCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  sectionTitle: {
-    ...typography.h5,
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
-  quickActions: {
+  topBar: {
+    marginBottom: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    alignItems: 'center',
   },
-  actionCard: {
+  topBarText: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: spacing.xs,
+    paddingHorizontal: 12,
   },
-  actionIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.lg,
+  topIconButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
   },
-  actionTitle: {
-    ...typography.caption,
-    color: colors.text.primary,
-    textAlign: 'center',
+  screenEyebrow: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#2563EB',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  recentCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
+  screenTitle: {
+    marginTop: 4,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
   },
-  recentHeader: {
+  statsGrid: {
+    marginTop: 14,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  statTile: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  statIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  viewAllText: {
-    ...typography.caption,
-    color: colors.primary[500],
-  },
-  clientItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  clientAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary[100],
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  avatarText: {
-    ...typography.h4,
-    color: colors.primary[500],
-  },
-  clientInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  clientName: {
-    ...typography.body,
-    color: colors.text.primary,
-    fontWeight: typography.weights.medium,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.full,
-  },
-  statusText: {
-    ...typography.caption,
-    fontWeight: typography.weights.medium,
-  },
-  statsCard: {
-    padding: spacing.lg,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
+    marginBottom: 12,
   },
   statValue: {
-    ...typography.h3,
-    color: colors.primary[500],
-    marginBottom: spacing.xs,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
   },
-  statLabel: {
-    ...typography.caption,
-    color: colors.text.secondary,
+  statTitle: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  statSubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  section: {
+    marginTop: 10,
+  },
+  sectionHeader: {
+    marginBottom: 12,
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    paddingRight: 10,
+  },
+  linkText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2563EB',
   },
 });
-
-export default DashboardScreenCA;
-

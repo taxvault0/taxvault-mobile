@@ -16,14 +16,14 @@ build/
 .env
 .env.*
 
-# Android
-android/.gradle/
-android/build/
-android/app/build/
+# Android (FULL IGNORE unless you eject intentionally)
+android/
 
 # iOS
-ios/build/
-ios/Pods/
+ios/
+# or if you want partial:
+# ios/build/
+# ios/Pods/
 
 # OS
 .DS_Store

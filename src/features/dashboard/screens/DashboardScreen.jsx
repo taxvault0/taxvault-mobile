@@ -129,6 +129,7 @@ const DashboardScreen = ({ navigation }) => {
   const heroTranslate = useRef(new Animated.Value(16)).current;
   const contentTranslate = useRef(new Animated.Value(24)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const caPressAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -197,6 +198,24 @@ const DashboardScreen = ({ navigation }) => {
     if (grandParent && typeof grandParent.openDrawer === 'function') {
       grandParent.openDrawer();
     }
+  };
+
+  const handleCaPressIn = () => {
+    Animated.spring(caPressAnim, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handleCaPressOut = () => {
+    Animated.spring(caPressAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 4,
+    }).start();
   };
 
   const profileLabel = useMemo(() => {
@@ -334,7 +353,7 @@ const DashboardScreen = ({ navigation }) => {
     return {
       missingItems: missingItems.slice(0, 3),
       summaryRows: summaryRows.slice(0, 4),
-      quickActions: quickActions,
+      quickActions,
       readyCount: completionCountBase.length,
     };
   }, [profile]);
@@ -358,6 +377,7 @@ const DashboardScreen = ({ navigation }) => {
     return Math.max(18, Math.min(92, Math.round((done / total) * 100)));
   }, [profile]);
 
+  const progressWidth = `${statusPercent}%`;
   const missingCount = dashboardMeta.missingItems.length;
   const hasAssignedCA = !!user?.assignedCA;
   const assignedCAName = user?.assignedCA?.name || 'Your CA';
@@ -394,7 +414,7 @@ const DashboardScreen = ({ navigation }) => {
             },
           ]}
         >
-          <TouchableOpacity style={styles.menuButton} onPress={openDrawer}>
+          <TouchableOpacity style={styles.menuButton} onPress={openDrawer} activeOpacity={0.85}>
             <Icon name="menu" size={24} color="#0F172A" />
           </TouchableOpacity>
 
@@ -403,7 +423,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.profileTag}>{profileLabel}</Text>
           </View>
 
-          <TouchableOpacity style={styles.bellButton}>
+          <TouchableOpacity style={styles.bellButton} activeOpacity={0.85}>
             <Icon name="bell-outline" size={22} color="#0F172A" />
           </TouchableOpacity>
         </Animated.View>
@@ -417,6 +437,8 @@ const DashboardScreen = ({ navigation }) => {
             },
           ]}
         >
+          <View style={styles.heroAccent} />
+
           <View style={styles.heroTopRow}>
             <View style={styles.heroBadge}>
               <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
@@ -431,6 +453,16 @@ const DashboardScreen = ({ navigation }) => {
           <Text style={styles.heroTitle}>Your return is in progress</Text>
           <Text style={styles.heroSubtitle}>
             Complete the remaining uploads, review your tax summary, and move toward filing.
+          </Text>
+
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: progressWidth }]} />
+          </View>
+
+          <Text style={styles.progressHint}>
+            {missingCount === 0
+              ? 'Everything urgent is complete right now.'
+              : `${missingCount} item${missingCount > 1 ? 's' : ''} still need attention.`}
           </Text>
 
           <View style={styles.heroStatsRow}>
@@ -454,6 +486,7 @@ const DashboardScreen = ({ navigation }) => {
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => navigateTo('UploadChecklist')}
+              activeOpacity={0.9}
             >
               <Icon name="file-check-outline" size={18} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>Continue Uploads</Text>
@@ -462,6 +495,7 @@ const DashboardScreen = ({ navigation }) => {
             <TouchableOpacity
               style={styles.secondaryButton}
               onPress={() => navigateTo('Checklist')}
+              activeOpacity={0.9}
             >
               <Text style={styles.secondaryButtonText}>Checklist</Text>
             </TouchableOpacity>
@@ -474,27 +508,31 @@ const DashboardScreen = ({ navigation }) => {
             transform: [{ translateY: contentTranslate }],
           }}
         >
-          <TouchableOpacity
-            style={styles.caCard}
-            activeOpacity={0.92}
-            onPress={() => navigateTo(caCardData.routeName)}
-          >
-            <View style={styles.caLeft}>
-              <View style={styles.caIconWrap}>
-                <Icon name={caCardData.icon} size={22} color="#2563EB" />
+          <Animated.View style={{ transform: [{ scale: caPressAnim }] }}>
+            <TouchableOpacity
+              style={styles.caCard}
+              activeOpacity={0.95}
+              onPressIn={handleCaPressIn}
+              onPressOut={handleCaPressOut}
+              onPress={() => navigateTo(caCardData.routeName)}
+            >
+              <View style={styles.caLeft}>
+                <View style={styles.caIconWrap}>
+                  <Icon name={caCardData.icon} size={22} color="#2563EB" />
+                </View>
+
+                <View style={styles.caTextWrap}>
+                  <Text style={styles.caTitle}>{caCardData.title}</Text>
+                  <Text style={styles.caSubtitle}>{caCardData.subtitle}</Text>
+                </View>
               </View>
 
-              <View style={styles.caTextWrap}>
-                <Text style={styles.caTitle}>{caCardData.title}</Text>
-                <Text style={styles.caSubtitle}>{caCardData.subtitle}</Text>
+              <View style={styles.caRight}>
+                <Text style={styles.caLink}>{caCardData.buttonLabel}</Text>
+                <Icon name="chevron-right" size={20} color="#94A3B8" />
               </View>
-            </View>
-
-            <View style={styles.caRight}>
-              <Text style={styles.caLink}>{caCardData.buttonLabel}</Text>
-              <Icon name="chevron-right" size={20} color="#94A3B8" />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </Animated.View>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -653,7 +691,7 @@ export default DashboardScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: '#F5F7FC',
   },
 
   container: {
@@ -677,7 +715,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
   },
 
   bellButton: {
@@ -688,7 +731,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
   },
 
   headerTextWrap: {
@@ -700,7 +748,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.7,
+    letterSpacing: -0.8,
   },
 
   profileTag: {
@@ -711,17 +759,31 @@ const styles = StyleSheet.create({
   },
 
   heroCard: {
+    position: 'relative',
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
     padding: 22,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 4,
+    borderColor: '#E6ECF8',
+    shadowColor: '#5B8DEF',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+
+  heroAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: '#5B8DEF',
+    opacity: 0.18,
   },
 
   heroTopRow: {
@@ -770,6 +832,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  progressTrack: {
+    height: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginTop: 18,
+  },
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#5B8DEF',
+    borderRadius: 999,
+  },
+
+  progressHint: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+
   heroStatsRow: {
     flexDirection: 'row',
     marginTop: 18,
@@ -783,7 +866,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
     alignItems: 'center',
   },
 
@@ -815,6 +898,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 6,
     flexDirection: 'row',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 4,
   },
 
   primaryButtonText: {
@@ -832,6 +920,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 6,
+    borderWidth: 1,
+    borderColor: '#DCE8FF',
   },
 
   secondaryButtonText: {
@@ -845,11 +935,16 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
     marginBottom: 18,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    elevation: 3,
   },
 
   caLeft: {
@@ -927,7 +1022,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -935,12 +1030,13 @@ const styles = StyleSheet.create({
   },
 
   missingCardPriority: {
+    backgroundColor: '#F8FBFF',
     borderColor: '#DCE8FF',
     shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
   },
 
   missingLeft: {
@@ -992,20 +1088,25 @@ const styles = StyleSheet.create({
   quickPill: {
     minWidth: '47%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
 
   quickPillIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: '#EEF4FF',
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: '#EAF1FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -1022,7 +1123,12 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
   },
 
   summaryRow: {
@@ -1060,7 +1166,7 @@ const styles = StyleSheet.create({
 
   summaryDivider: {
     height: 1,
-    backgroundColor: '#E5EAF2',
+    backgroundColor: '#E6ECF8',
     marginVertical: 6,
   },
 
@@ -1072,6 +1178,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    elevation: 5,
   },
 
   bottomCtaText: {
@@ -1086,7 +1197,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E5EAF2',
+    borderColor: '#E6ECF8',
     flexDirection: 'row',
     alignItems: 'center',
   },

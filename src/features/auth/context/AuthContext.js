@@ -17,14 +17,28 @@ export const useAuth = () => {
 const STORAGE_KEY = 'taxvault_user';
 const TOKEN_KEY = 'token';
 
-/* ---------------- TAX PROFILE ---------------- */
+const BUILT_IN_CA_DEMO = {
+  id: 'ca-demo-001',
+  title: 'CA Demo Account',
+  email: 'ca@demo.com',
+  password: 'demo1234',
+  role: 'ca',
+  profile: {
+    name: 'Gaurav Bhardwaj',
+    userType: 'professional',
+    firmName: 'TaxVault Advisory',
+    caNumber: 'CA-2026-001',
+    specialization: 'Personal Tax, Self-Employed, Small Business',
+    yearsOfExperience: '8 years',
+    taxProfile: {},
+    maritalStatus: 'Single',
+    dependents: [],
+  },
+};
 
 const normalizeTaxProfile = (user = {}) => {
   const raw = user.taxProfile || {};
-  const spouseTaxProfile =
-    raw.spouseTaxProfile ||
-    user.spouseInfo?.taxProfile ||
-    {};
+  const spouseTaxProfile = raw.spouseTaxProfile || user.spouseInfo?.taxProfile || {};
 
   return {
     employment: !!raw.employment,
@@ -38,11 +52,7 @@ const normalizeTaxProfile = (user = {}) => {
     ccb: !!raw.ccb,
     investments: !!raw.investments,
     donations: !!raw.donations,
-
-    spouseIncomeSources: Array.isArray(raw.spouseIncomeSources)
-      ? raw.spouseIncomeSources
-      : [],
-
+    spouseIncomeSources: Array.isArray(raw.spouseIncomeSources) ? raw.spouseIncomeSources : [],
     spouseTaxProfile: {
       employment: !!spouseTaxProfile.employment,
       gigWork: !!spouseTaxProfile.gigWork,
@@ -76,23 +86,18 @@ const buildUser = (rawUser = {}) => {
     name: rawUser.name || '',
     email: rawUser.email || '',
     role: rawUser.role || 'user',
-
     userType:
       rawUser.userType ||
       (rawUser.role === 'ca' ? 'professional' : getPrimaryUserType(taxProfile)),
-
     taxProfile,
     incomeSources: Array.isArray(rawUser.incomeSources)
       ? rawUser.incomeSources
       : getIncomeSourcesFromTaxProfile(taxProfile),
-
     maritalStatus: rawUser.maritalStatus || 'Single',
     spouseInfo: rawUser.spouseInfo || null,
     dependents: Array.isArray(rawUser.dependents) ? rawUser.dependents : [],
-
     businessName: rawUser.businessName || '',
     platforms: Array.isArray(rawUser.platforms) ? rawUser.platforms : [],
-
     firmName: rawUser.firmName || '',
     caNumber: rawUser.caNumber || '',
     specialization: rawUser.specialization || '',
@@ -107,29 +112,42 @@ const mapDemoUserToAuthShape = (demoUser) => {
 
   return {
     id: demoUser.id,
-    name: profile.name || demoUser.title,
-    email: demoUser.email,
+    name: profile.name || demoUser.title || '',
+    email: demoUser.email || '',
     role: demoUser.role || 'user',
-    password: demoUser.password,
-    userType: profile.userType || getPrimaryUserType(taxProfile),
+    password: demoUser.password || '',
+    userType:
+      profile.userType ||
+      (demoUser.role === 'ca' ? 'professional' : getPrimaryUserType(taxProfile)),
     taxProfile: {
       ...taxProfile,
       spouse: !!spouseInfo,
       spouseTaxProfile: spouseInfo?.taxProfile || {},
     },
-    incomeSources: getIncomeSourcesFromTaxProfile(taxProfile),
+    incomeSources:
+      Array.isArray(profile.incomeSources) && profile.incomeSources.length
+        ? profile.incomeSources
+        : getIncomeSourcesFromTaxProfile(taxProfile),
     maritalStatus: profile.maritalStatus || 'Single',
     spouseInfo,
     dependents: Array.isArray(profile.dependents) ? profile.dependents : [],
+    businessName: profile.businessName || '',
+    platforms: Array.isArray(profile.platforms) ? profile.platforms : [],
+    firmName: profile.firmName || '',
+    caNumber: profile.caNumber || '',
+    specialization: profile.specialization || '',
+    yearsOfExperience: profile.yearsOfExperience || '',
   };
 };
 
-const DEMO_USERS = demoUsers.reduce((acc, item) => {
-  acc[item.email.trim().toLowerCase()] = mapDemoUserToAuthShape(item);
+const mergedDemoUsers = [...(Array.isArray(demoUsers) ? demoUsers : []), BUILT_IN_CA_DEMO];
+
+const DEMO_USERS = mergedDemoUsers.reduce((acc, item) => {
+  const email = String(item.email || '').trim().toLowerCase();
+  if (!email) return acc;
+  acc[email] = mapDemoUserToAuthShape(item);
   return acc;
 }, {});
-
-/* ---------------- PROVIDER ---------------- */
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -185,51 +203,115 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, role = 'user') => {
     try {
-      const normalizedEmail = email.toLowerCase().trim();
-      const normalizedPassword = password.trim();
+      const normalizedEmail = String(email || '').trim().toLowerCase();
+      const normalizedPassword = String(password || '').trim();
+      const normalizedRole = role === 'ca' ? 'ca' : 'user';
 
       const demoUser = DEMO_USERS[normalizedEmail];
 
-      if (demoUser && demoUser.password === normalizedPassword) {
+      if (
+        demoUser &&
+        demoUser.password === normalizedPassword &&
+        demoUser.role === normalizedRole
+      ) {
         await persistAuth(demoUser);
 
         Toast.show({
           type: 'success',
-          text1: 'Demo Login',
+          text1: normalizedRole === 'ca' ? 'CA Demo Login' : 'Demo Login',
           text2: `Logged in as ${demoUser.name}`,
         });
 
-        return { success: true };
+        return { success: true, user: demoUser };
       }
 
       const res = await authAPI.login({
         email: normalizedEmail,
         password: normalizedPassword,
-        role,
+        role: normalizedRole,
       });
 
-      const { user: authUser, token: authToken } = res.data;
+      const authUser = res?.data?.user;
+      const authToken = res?.data?.token;
 
-      await persistAuth(authUser, authToken);
+      if (!authUser) {
+        Alert.alert(
+          'Login failed',
+          normalizedRole === 'ca' ? 'Invalid CA credentials' : 'Invalid credentials'
+        );
+        return { success: false };
+      }
 
-      return { success: true };
+      const resolvedUser = {
+        ...authUser,
+        role: authUser.role || normalizedRole,
+      };
+
+      await persistAuth(resolvedUser, authToken);
+
+      return { success: true, user: resolvedUser };
     } catch (err) {
-      Alert.alert('Login failed', 'Invalid credentials');
+      Alert.alert(
+        'Login failed',
+        role === 'ca' ? 'Invalid CA credentials' : 'Invalid credentials'
+      );
+      return { success: false };
+    }
+  };
+
+  const demoLogin = async (role = 'user') => {
+    try {
+      const normalizedRole = role === 'ca' ? 'ca' : 'user';
+
+      const matchedDemoUser = Object.values(DEMO_USERS).find(
+        (item) => item.role === normalizedRole
+      );
+
+      if (!matchedDemoUser) {
+        Alert.alert(
+          'Demo login failed',
+          normalizedRole === 'ca' ? 'No CA demo account found' : 'No demo user found'
+        );
+        return { success: false };
+      }
+
+      await persistAuth(matchedDemoUser);
+
+      Toast.show({
+        type: 'success',
+        text1: normalizedRole === 'ca' ? 'CA Demo Login' : 'Demo Login',
+        text2: `Logged in as ${matchedDemoUser.name}`,
+      });
+
+      return { success: true, user: matchedDemoUser };
+    } catch (err) {
+      Alert.alert('Demo login failed', 'Unable to login with demo account');
       return { success: false };
     }
   };
 
   const register = async (data, role = 'user') => {
     try {
-      const res = await authAPI.register({ ...data, role });
+      const normalizedRole = role === 'ca' ? 'ca' : 'user';
+      const res = await authAPI.register({ ...data, role: normalizedRole });
 
-      const { user: authUser, token: authToken } = res.data;
+      const authUser = res?.data?.user;
+      const authToken = res?.data?.token;
 
-      await persistAuth(authUser, authToken);
+      if (!authUser) {
+        Alert.alert('Registration failed', 'Unable to create account');
+        return { success: false };
+      }
+
+      const resolvedUser = {
+        ...authUser,
+        role: authUser.role || normalizedRole,
+      };
+
+      await persistAuth(resolvedUser, authToken);
 
       Alert.alert('Success', 'Account created');
-
-      return { success: true };
+      return { success: true, user: resolvedUser };
     } catch (err) {
       Alert.alert('Registration failed');
       return { success: false };
@@ -251,12 +333,13 @@ export const AuthProvider = ({ children }) => {
       token,
       loading,
       login,
+      demoLogin,
       register,
       logout,
       isAuthenticated: !!user,
       isCA: user?.role === 'ca',
       isUser: user?.role === 'user',
-      demoUsers: DEMO_USERS,
+      demoUsers: Object.values(DEMO_USERS),
     }),
     [user, token, loading]
   );

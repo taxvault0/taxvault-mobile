@@ -1,237 +1,241 @@
 import React from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 
-const ProfileScreenCA = () => {
-  const navigation = useNavigation();
-  const { user, logout } = useAuth();
+const profile = {
+  name: 'Gaurav Bhardwaj, CA',
+  email: 'ca@demo.com',
+  phone: '+1 (587) 555-1188',
+  firmName: 'TaxVault Advisory',
+  caNumber: 'CA-2026-001',
+  specialization: 'Personal Tax, Self-Employed, Small Business',
+  yearsOfExperience: '8 years',
+  city: 'Fort McMurray',
+  province: 'AB',
+};
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-          },
-        },
-      ]
-    );
-  };
-
-  const InfoRow = ({ icon, label, value }) => (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLeft}>
-        <View style={styles.iconWrap}>
-          <Icon name={icon} size={18} color={colors.primary[500]} />
+const ProfileRow = ({ icon, label, value, onPress, danger }) => {
+  const content = (
+    <View style={styles.row}>
+      <View style={styles.rowLeft}>
+        <View style={[styles.rowIconWrap, danger && styles.rowIconWrapDanger]}>
+          <Icon name={icon} size={18} color={danger ? '#B91C1C' : '#2563EB'} />
         </View>
-        <View style={styles.infoTextWrap}>
-          <Text style={styles.infoLabel}>{label}</Text>
-          <Text style={styles.infoValue}>{value || 'Not added'}</Text>
+        <View>
+          <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
+          {!!value && <Text style={styles.rowValue}>{value}</Text>}
         </View>
       </View>
+
+      <Icon name="chevron-right" size={20} color={danger ? '#B91C1C' : '#94A3B8'} />
     </View>
   );
 
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.rowCard} activeOpacity={0.85} onPress={onPress}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={styles.rowCard}>{content}</View>;
+};
+
+const ProfileScreenCA = () => {
+  const navigation = useNavigation();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout from the CA account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+        },
+      },
+    ]);
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-left" size={22} color={colors.text.primary} />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>CA Profile</Text>
-
-          <View style={styles.headerSpacer} />
-        </View>
-
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Icon name="account-tie" size={42} color={colors.white} />
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroCard}>
+          <View style={styles.avatarWrap}>
+            <Icon name="account-tie-outline" size={46} color="#2563EB" />
           </View>
 
-          <Text style={styles.name}>{user?.name || 'CA User'}</Text>
-          <Text style={styles.role}>Chartered Accountant</Text>
+          <Text style={styles.name}>{profile.name}</Text>
+          <Text style={styles.subtitle}>{profile.firmName}</Text>
 
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Professional Account</Text>
+          <View style={styles.badgesRow}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Verified CA</Text>
+            </View>
+            <View style={[styles.badge, styles.badgeSecondary]}>
+              <Text style={[styles.badgeText, styles.badgeSecondaryText]}>Active Practice</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Details</Text>
+        <Text style={styles.sectionTitle}>Professional Details</Text>
 
-          <InfoRow icon="email-outline" label="Email" value={user?.email} />
-          <InfoRow icon="phone-outline" label="Phone" value={user?.phone} />
-          <InfoRow icon="card-account-details-outline" label="CA Number" value={user?.caNumber} />
-        </View>
+        <ProfileRow icon="email-outline" label="Email" value={profile.email} />
+        <ProfileRow icon="phone-outline" label="Phone" value={profile.phone} />
+        <ProfileRow icon="office-building-outline" label="Firm Name" value={profile.firmName} />
+        <ProfileRow icon="card-account-details-outline" label="CA Number" value={profile.caNumber} />
+        <ProfileRow icon="briefcase-outline" label="Specialization" value={profile.specialization} />
+        <ProfileRow icon="timeline-outline" label="Experience" value={profile.yearsOfExperience} />
+        <ProfileRow icon="map-marker-outline" label="Location" value={`${profile.city}, ${profile.province}`} />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Professional Details</Text>
+        <Text style={styles.sectionTitle}>Account</Text>
 
-          <InfoRow icon="office-building-outline" label="Firm Name" value={user?.firmName} />
-          <InfoRow icon="briefcase-outline" label="Specialization" value={user?.specialization} />
-          <InfoRow
-            icon="calendar-clock-outline"
-            label="Years of Experience"
-            value={user?.yearsOfExperience ? `${user.yearsOfExperience} years` : ''}
-          />
-          <InfoRow icon="identifier" label="Client ID" value={user?.clientId} />
-          <InfoRow icon="calendar-star" label="Member Since" value={user?.memberSince} />
-        </View>
+        <ProfileRow
+          icon="chart-box-outline"
+          label="Analytics"
+          value="Open practice insights"
+          onPress={() => navigation.navigate('CAAnalytics')}
+        />
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Icon name="logout" size={20} color={colors.white} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <ProfileRow
+          icon="cog-outline"
+          label="Settings"
+          value="Profile and app settings"
+          onPress={() => navigation.navigate('Settings')}
+        />
+
+        <ProfileRow
+          icon="logout"
+          label="Logout"
+          value="Sign out from CA workspace"
+          onPress={handleLogout}
+          danger
+        />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
+export default ProfileScreenCA;
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   container: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  header: {
-    flexDirection: 'row',
+  content: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 18,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    ...(typography.h3 || {}),
-    color: colors.text.primary,
-    fontWeight: '700',
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  profileCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: colors.primary[500],
+  avatarWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
   },
   name: {
-    ...(typography.h2 || {}),
-    color: colors.text.primary,
-    fontWeight: '700',
+    marginTop: 16,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
     textAlign: 'center',
-    marginBottom: 6,
   },
-  role: {
-    ...(typography.body || {}),
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 14,
   },
   badge: {
-    backgroundColor: colors.primary[50],
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    backgroundColor: '#DCFCE7',
     borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginHorizontal: 4,
+    marginBottom: 8,
+  },
+  badgeSecondary: {
+    backgroundColor: '#EEF2FF',
   },
   badgeText: {
-    color: colors.primary[500],
-    fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#166534',
   },
-  section: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+  badgeSecondaryText: {
+    color: '#4338CA',
   },
   sectionTitle: {
-    ...(typography.h4 || {}),
-    color: colors.text.primary,
-    fontWeight: '700',
-    marginBottom: spacing.md,
+    marginTop: 6,
+    marginBottom: 10,
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
   },
-  infoRow: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  infoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
+  rowCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    backgroundColor: colors.primary[50],
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
   },
-  infoTextWrap: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 15,
-    color: colors.text.primary,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    backgroundColor: '#DC2626',
-    borderRadius: borderRadius.lg,
-    minHeight: 52,
+  rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+    flex: 1,
+    paddingRight: 10,
   },
-  logoutText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
+  rowIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rowIconWrapDanger: {
+    backgroundColor: '#FEE2E2',
+  },
+  rowLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  rowLabelDanger: {
+    color: '#B91C1C',
+  },
+  rowValue: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
   },
 });
-
-export default ProfileScreenCA;
