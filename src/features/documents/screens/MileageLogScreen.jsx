@@ -96,7 +96,7 @@ const MileageLogScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header title="Mileage Log" showBack />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
@@ -250,4 +250,6 @@ const MileageLogScreen = () => {
 };
 
 export default MileageLogScreen;
+
+
 

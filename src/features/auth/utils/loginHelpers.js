@@ -26,3 +26,5 @@ export const getRememberedDemoPayload = (scenario) => ({
 });
 
 export const normalizeEmail = (value = '') => value.trim().toLowerCase();
+
+

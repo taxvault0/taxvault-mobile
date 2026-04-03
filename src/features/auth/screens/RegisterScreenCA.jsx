@@ -1126,3 +1126,5 @@ const styles = StyleSheet.create({
 });
 
 export default RegisterScreenCA;
+
+

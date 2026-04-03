@@ -5,11 +5,13 @@ const createTaxProfile = ({
   gigWork = false,
   selfEmployment = false,
   incorporatedBusiness = false,
+  spouse = false,
 } = {}) => ({
   employment,
   gigWork,
   selfEmployment,
   incorporatedBusiness,
+  spouse,
 });
 
 const createProfile = ({
@@ -21,6 +23,7 @@ const createProfile = ({
   dependents = [],
   businessName,
   platforms = [],
+  incomeSources = [],
 }) => ({
   name,
   userType,
@@ -29,6 +32,7 @@ const createProfile = ({
   spouseInfo,
   dependents,
   platforms,
+  incomeSources,
   ...(businessName ? { businessName } : {}),
 });
 
@@ -55,22 +59,25 @@ const INCOME_STATES = [
     key: 'unemployed',
     label: 'Unemployed',
     userType: 'regular',
+    incomeSources: [],
     taxProfile: createTaxProfile({}),
     platforms: [],
     businessName: '',
   },
   {
-    key: 'employed',
-    label: 'Employed',
+    key: 't4',
+    label: 'T4',
     userType: 'employee',
+    incomeSources: ['employment'],
     taxProfile: createTaxProfile({ employment: true }),
     platforms: [],
     businessName: '',
   },
   {
-    key: 'self-employed',
-    label: 'Self-Employed',
+    key: 't4a',
+    label: 'T4A',
     userType: 'self-employed',
+    incomeSources: ['self-employment'],
     taxProfile: createTaxProfile({ selfEmployment: true, gigWork: true }),
     platforms: ['Uber', 'DoorDash'],
     businessName: '',
@@ -79,30 +86,41 @@ const INCOME_STATES = [
     key: 'business',
     label: 'Business',
     userType: 'business',
+    incomeSources: ['business'],
     taxProfile: createTaxProfile({ incorporatedBusiness: true }),
     platforms: [],
     businessName: 'Demo Business Inc.',
   },
   {
-    key: 'employed-self-employed',
-    label: 'Employed + Self-Employed',
+    key: 't4-t4a',
+    label: 'T4 + T4A',
     userType: 'self-employed',
-    taxProfile: createTaxProfile({ employment: true, selfEmployment: true, gigWork: true }),
+    incomeSources: ['employment', 'self-employment'],
+    taxProfile: createTaxProfile({
+      employment: true,
+      selfEmployment: true,
+      gigWork: true,
+    }),
     platforms: ['Uber'],
     businessName: '',
   },
   {
-    key: 'employed-business',
-    label: 'Employed + Business',
+    key: 't4-business',
+    label: 'T4 + Business',
     userType: 'business',
-    taxProfile: createTaxProfile({ employment: true, incorporatedBusiness: true }),
+    incomeSources: ['employment', 'business'],
+    taxProfile: createTaxProfile({
+      employment: true,
+      incorporatedBusiness: true,
+    }),
     platforms: [],
     businessName: 'Demo Business Inc.',
   },
   {
-    key: 'self-employed-business',
-    label: 'Self-Employed + Business',
+    key: 't4a-business',
+    label: 'T4A + Business',
     userType: 'business',
+    incomeSources: ['self-employment', 'business'],
     taxProfile: createTaxProfile({
       selfEmployment: true,
       gigWork: true,
@@ -112,9 +130,10 @@ const INCOME_STATES = [
     businessName: 'Demo Business Inc.',
   },
   {
-    key: 'employed-self-employed-business',
-    label: 'Employed + Self-Employed + Business',
+    key: 't4-t4a-business',
+    label: 'T4 + T4A + Business',
     userType: 'business',
+    incomeSources: ['employment', 'self-employment', 'business'],
     taxProfile: createTaxProfile({
       employment: true,
       selfEmployment: true,
@@ -134,21 +153,29 @@ const spouseInfoFromState = (state, index) => ({
       ? '0'
       : state.key.includes('business')
       ? '90000'
-      : state.key.includes('self-employed')
+      : state.key.includes('t4a')
       ? '45000'
       : '65000',
-  taxProfile: state.taxProfile,
+  incomeSources: state.incomeSources,
+  taxProfile: {
+    ...state.taxProfile,
+    spouse: false,
+  },
 });
 
 const singleScenario = (state, index) =>
   createDemoUser({
-    id: `u-${state.key}`,
-    title: `U-${state.label}`,
-    email: `u-${state.key}@demo.com`,
+    id: `single-${state.key}`,
+    title: `Single - ${state.label}`,
+    email: `single-${state.key}@demo.com`,
     profile: createProfile({
       name: `Demo User ${index}`,
       userType: state.userType,
-      taxProfile: state.taxProfile,
+      incomeSources: state.incomeSources,
+      taxProfile: {
+        ...state.taxProfile,
+        spouse: false,
+      },
       maritalStatus: 'Single',
       spouseInfo: null,
       dependents: [],
@@ -157,15 +184,19 @@ const singleScenario = (state, index) =>
     }),
   });
 
-const householdScenario = (userState, spouseState, index) =>
+const marriedScenario = (userState, spouseState, index) =>
   createDemoUser({
-    id: `u-${userState.key}-s-${spouseState.key}`,
-    title: `U-${userState.label} + S-${spouseState.label}`,
-    email: `u-${userState.key}-s-${spouseState.key}@demo.com`,
+    id: `married-${userState.key}-spouse-${spouseState.key}`,
+    title: `Married - ${userState.label} | Spouse - ${spouseState.label}`,
+    email: `married-${userState.key}-spouse-${spouseState.key}@demo.com`,
     profile: createProfile({
       name: `Demo Household ${index}`,
       userType: userState.userType,
-      taxProfile: userState.taxProfile,
+      incomeSources: userState.incomeSources,
+      taxProfile: {
+        ...userState.taxProfile,
+        spouse: true,
+      },
       maritalStatus: 'Married',
       spouseInfo: spouseInfoFromState(spouseState, index),
       dependents: [],
@@ -176,13 +207,13 @@ const householdScenario = (userState, spouseState, index) =>
 
 const singleUsers = INCOME_STATES.map((state, index) => singleScenario(state, index + 1));
 
-const householdUsers = INCOME_STATES.flatMap((userState, userIndex) =>
+const marriedUsers = INCOME_STATES.flatMap((userState, userIndex) =>
   INCOME_STATES.map((spouseState, spouseIndex) =>
-    householdScenario(userState, spouseState, `${userIndex + 1}-${spouseIndex + 1}`)
+    marriedScenario(userState, spouseState, `${userIndex + 1}-${spouseIndex + 1}`)
   )
 );
 
-export const demoUsers = [...singleUsers, ...householdUsers];
+export const demoUsers = [...singleUsers, ...marriedUsers];
 
 export const toneMap = {
   blue: {

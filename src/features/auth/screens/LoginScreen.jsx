@@ -11,13 +11,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors, spacing, typography, borderRadius } from '@/styles/theme';
+
+import { theme } from '@/styles/theme';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { demoUsers, ENABLE_DEMO_LOGINS } from '@/features/auth/utils/loginScenarios';
 import {
   validateLoginForm,
   getRememberedDemoPayload,
 } from '@/features/auth/utils/loginHelpers';
+
+const { colors, spacing, radius, typography, shadows } = theme;
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
@@ -97,7 +100,7 @@ const LoginScreen = ({ navigation }) => {
                 <Icon
                   name="shield-check-outline"
                   size={22}
-                  color={colors.primary[500]}
+                  color={colors.primary}
                 />
                 <Text style={styles.brandText}>TaxVault</Text>
               </View>
@@ -106,7 +109,7 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.subtitle}>{subtitle}</Text>
 
               <View style={styles.roleSummary}>
-                <Icon name="account" size={18} color={colors.primary[500]} />
+                <Icon name="account" size={18} color={colors.primary} />
                 <Text style={styles.roleSummaryText}>Individual User</Text>
               </View>
             </View>
@@ -150,10 +153,13 @@ const LoginScreen = ({ navigation }) => {
                         nestedScrollEnabled
                         showsVerticalScrollIndicator
                       >
-                        {demoUsers.map((item) => (
+                        {demoUsers.map((item, index) => (
                           <TouchableOpacity
                             key={item.id}
-                            style={styles.dropdownItem}
+                            style={[
+                              styles.dropdownItem,
+                              index === demoUsers.length - 1 && styles.dropdownItemLast,
+                            ]}
                             onPress={() => handleSelectDemoUser(item)}
                             disabled={submitting}
                           >
@@ -266,7 +272,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.backToRoles}
               onPress={handleChangeRole}
             >
-              <Icon name="arrow-left" size={16} color={colors.primary[500]} />
+              <Icon name="arrow-left" size={16} color={colors.primary} />
               <Text style={styles.backToRolesText}>Change role</Text>
             </TouchableOpacity>
           </View>
@@ -302,11 +308,12 @@ const styles = StyleSheet.create({
   brandBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
+    borderRadius: radius.lg,
     marginBottom: spacing.lg,
+    ...shadows.soft,
   },
   brandText: {
     marginLeft: spacing.xs,
@@ -330,26 +337,22 @@ const styles = StyleSheet.create({
   roleSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary[50],
-    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   roleSummaryText: {
     marginLeft: spacing.xs,
-    color: colors.primary[500],
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
   formCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl || 20,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadows.medium,
   },
   sectionTitle: {
     fontSize: 14,
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.md,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.background,
     flexDirection: 'row',
@@ -386,8 +389,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
     overflow: 'hidden',
   },
   dropdownScroll: {
@@ -398,6 +401,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  dropdownItemLast: {
+    borderBottomWidth: 0,
   },
   dropdownItemText: {
     color: colors.text.primary,
@@ -422,7 +428,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.md,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -435,11 +441,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   inputError: {
-    borderColor: '#DC2626',
+    borderColor: colors.danger,
   },
   errorText: {
     marginTop: 6,
-    color: '#DC2626',
+    color: colors.danger,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -448,14 +454,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   forgotText: {
-    color: colors.primary[500],
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '600',
   },
   loginButton: {
     minHeight: 52,
-    backgroundColor: colors.primary[500],
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -463,7 +469,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   loginButtonText: {
-    color: colors.white,
+    color: colors.text.inverse,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -477,7 +483,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   registerLink: {
-    color: colors.primary[500],
+    color: colors.primary,
     fontWeight: '700',
   },
   backToRoles: {
@@ -489,10 +495,14 @@ const styles = StyleSheet.create({
   },
   backToRolesText: {
     marginLeft: spacing.xs,
-    color: colors.primary[500],
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
 });
 
 export default LoginScreen;
+
+
+
+

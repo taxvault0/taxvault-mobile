@@ -314,7 +314,7 @@ const MileageTrackerScreen = () => {
           top: 80,
           left: spacing.lg,
           right: spacing.lg,
-          ...spacing.shadows.lg,
+          ...shadows.lg,
         }}>
           <Card.Body>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -394,7 +394,7 @@ const MileageTrackerScreen = () => {
           paddingVertical: spacing.xs,
           flexDirection: 'row',
           alignItems: 'center',
-          ...spacing.shadows.md,
+          ...shadows.md,
         }}>
           <View style={{
             width: 8,
@@ -413,6 +413,8 @@ const MileageTrackerScreen = () => {
 };
 
 export default MileageTrackerScreen;
+
+
 
 
 

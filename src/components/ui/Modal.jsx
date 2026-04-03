@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    ...spacing.shadow.lg,
+    ...shadows.lg,
   },
   header: {
     flexDirection: 'row',
@@ -206,6 +206,8 @@ const styles = StyleSheet.create({
 });
 
 export default Modal;
+
+
 
 
 

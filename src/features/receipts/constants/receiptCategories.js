@@ -50,3 +50,5 @@ const receiptCategories = [
 ];
 
 export default receiptCategories;
+
+

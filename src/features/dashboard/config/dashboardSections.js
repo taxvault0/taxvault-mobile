@@ -210,3 +210,5 @@ export const dashboardSectionCatalog = {
 };
 
 export default dashboardSectionCatalog;
+
+

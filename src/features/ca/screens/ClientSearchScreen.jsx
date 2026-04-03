@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, {  useState  } from 'react';
+import { useTheme } from '@/core/providers/ThemeContext';
 import {
   View,
   Text,
@@ -15,9 +16,7 @@ import Header from '@/components/layout/AppHeader';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { colors } from '@/styles/theme';
-import { typography } from '@/styles/theme';
-import { spacing } from '@/styles/theme';
+import { colors, spacing, typography, borderRadius } from '@/styles/theme';
 import api from '@/services/api';
 
 const ClientSearchScreen = () => {
@@ -55,7 +54,7 @@ const ClientSearchScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header title="Find Client" showBack />
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
@@ -159,7 +158,7 @@ const ClientSearchScreen = () => {
                 width: 200,
                 height: 200,
                 backgroundColor: colors.gray[200],
-                borderRadius: spacing.radius.lg,
+                borderRadius: borderRadius.lg,
                 justifyContent: 'center',
                 alignItems: 'center',
                 marginBottom: spacing.lg,
@@ -267,4 +266,13 @@ const ClientSearchScreen = () => {
 };
 
 export default ClientSearchScreen;
+
+
+
+
+
+
+
+
+
 

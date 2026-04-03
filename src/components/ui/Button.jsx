@@ -2,211 +2,152 @@ import React from 'react';
 import {
   TouchableOpacity,
   Text,
+  StyleSheet,
   ActivityIndicator,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, typography, spacing, borderRadius } from '@/styles/theme';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { theme } from '@/styles/theme';
 
 const Button = ({
-  children,
+  title,
+  onPress,
   variant = 'primary',
   size = 'md',
   disabled = false,
   loading = false,
-  icon,
-  iconPosition = 'left',
-  fullWidth = false,
-  onPress,
+  iconLeft,
+  iconRight,
   style,
   textStyle,
-  gradient = false,
-  ...props
 }) => {
-  const getButtonStyles = () => {
-    const heightMap = {
-      sm: 40,
-      md: 48,
-      lg: 56,
-    };
-
-    const fontSizeMap = {
-      sm: typography?.sizes?.sm || 14,
-      md: typography?.sizes?.base || 16,
-      lg: typography?.sizes?.lg || 18,
-    };
-
-    const baseStyles = {
-      container: {
-        height: heightMap[size] || heightMap.md,
-        paddingHorizontal: size === 'sm' ? spacing.md : spacing.lg,
-        borderRadius: borderRadius?.md || 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: disabled ? 0.6 : 1,
-      },
-      text: {
-        fontSize: fontSizeMap[size],
-        fontWeight: typography?.weights?.semiBold || '600',
-      },
-    };
-
-    switch (variant) {
-      case 'primary':
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: colors.primary[500],
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.white,
-          },
-        };
-
-      case 'secondary':
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: colors.secondary?.[500] || colors.primary[400],
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.white,
-          },
-        };
-
-      case 'outline':
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderColor: colors.primary[500],
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.primary[500],
-          },
-        };
-
-      case 'success':
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: colors.success?.main || '#16a34a',
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.white,
-          },
-        };
-
-      case 'warning':
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: colors.warning?.main || '#f59e0b',
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.white,
-          },
-        };
-
-      case 'ghost':
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: 'transparent',
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.primary[500],
-          },
-        };
-
-      default:
-        return {
-          container: {
-            ...baseStyles.container,
-            backgroundColor: colors.primary[500],
-          },
-          text: {
-            ...baseStyles.text,
-            color: colors.white,
-          },
-        };
-    }
-  };
-
-  const buttonStyles = getButtonStyles();
-
-  const ButtonContent = () => (
-    <>
-      {loading && (
-        <ActivityIndicator
-          size="small"
-          color={
-            variant === 'outline' || variant === 'ghost'
-              ? colors.primary[500]
-              : colors.white
-          }
-          style={{ marginRight: spacing.sm }}
-        />
-      )}
-
-      {icon && iconPosition === 'left' && !loading && (
-        <View style={{ marginRight: spacing.sm }}>{icon}</View>
-      )}
-
-      <Text style={[buttonStyles.text, textStyle]}>{children}</Text>
-
-      {icon && iconPosition === 'right' && !loading && (
-        <View style={{ marginLeft: spacing.sm }}>{icon}</View>
-      )}
-    </>
-  );
-
-  if (gradient) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || loading}
-        activeOpacity={0.8}
-        style={[fullWidth && { width: '100%' }, style]}
-        {...props}
-      >
-        <LinearGradient
-          colors={
-            colors.gradients?.[variant] ||
-            colors.gradients?.primary || [
-              colors.primary[500],
-              colors.primary[400],
-            ]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[buttonStyles.container, fullWidth && { width: '100%' }]}
-        >
-          <ButtonContent />
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  }
+  const isDisabled = disabled || loading;
 
   return (
     <TouchableOpacity
+      activeOpacity={0.9}
       onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
-      style={[buttonStyles.container, fullWidth && { width: '100%' }, style]}
-      {...props}
+      disabled={isDisabled}
+      style={[
+        styles.base,
+        styles[size],
+        styles[variant],
+        isDisabled && styles.disabled,
+        style,
+      ]}
     >
-      <ButtonContent />
+      <View style={styles.content}>
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color={variant === 'primary' ? theme.colors.text.inverse : theme.colors.text.primary}
+          />
+        ) : (
+          <>
+            {iconLeft ? (
+              <Icon
+                name={iconLeft}
+                size={18}
+                color={variant === 'primary' ? theme.colors.text.inverse : theme.colors.text.primary}
+                style={styles.leftIcon}
+              />
+            ) : null}
+
+            <Text
+              style={[
+                styles.textBase,
+                styles[`${variant}Text`],
+                styles[`${size}Text`],
+                textStyle,
+              ]}
+            >
+              {title}
+            </Text>
+
+            {iconRight ? (
+              <Icon
+                name={iconRight}
+                size={18}
+                color={variant === 'primary' ? theme.colors.text.inverse : theme.colors.text.primary}
+                style={styles.rightIcon}
+              />
+            ) : null}
+          </>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };
 
+const styles = StyleSheet.create({
+  base: {
+    borderRadius: theme.borderRadius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  md: {
+    minHeight: 56,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+  },
+  sm: {
+    minHeight: 46,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+
+  primary: {
+    backgroundColor: theme.colors.secondary,
+    ...theme.shadows.medium,
+  },
+  secondary: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  soft: {
+    backgroundColor: theme.colors.primarySoft,
+  },
+
+  disabled: {
+    opacity: 0.6,
+  },
+
+  textBase: {
+    fontWeight: '700',
+  },
+  mdText: {
+    fontSize: 16,
+  },
+  smText: {
+    fontSize: 14,
+  },
+
+  primaryText: {
+    color: theme.colors.text.inverse,
+  },
+  secondaryText: {
+    color: theme.colors.text.primary,
+  },
+  softText: {
+    color: theme.colors.primary,
+  },
+
+  leftIcon: {
+    marginRight: 8,
+  },
+  rightIcon: {
+    marginLeft: 8,
+  },
+});
+
 export default Button;
+
+
+

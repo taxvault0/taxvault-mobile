@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
@@ -12,19 +12,21 @@ import { ThemeProvider } from '@/core/providers/ThemeContext';
 import AppNavigator from '@/core/navigation/AppNavigator';
 import { paperTheme } from '@/styles/theme';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient();
 
 export default function App() {
-  useEffect(() => {
-    const prepare = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  const onNavigationReady = useCallback(async () => {
+    try {
       await SplashScreen.hideAsync();
-    };
-
-    prepare();
+      console.log('✅ Splash screen hidden');
+    } catch (error) {
+      console.log('❌ Splash hide failed:', error);
+    }
   }, []);
+
+  console.log('✅ App rendered');
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -33,7 +35,7 @@ export default function App() {
           <PaperProvider theme={paperTheme}>
             <ThemeProvider>
               <AuthProvider>
-                <NavigationContainer>
+                <NavigationContainer onReady={onNavigationReady}>
                   <AppNavigator />
                 </NavigationContainer>
               </AuthProvider>

@@ -30,7 +30,7 @@ const BottomNav = () => {
         backgroundColor: colors.white,
         borderTopWidth: 1,
         borderTopColor: colors.border.light,
-        ...spacing.shadows.lg,
+        ...shadows.lg,
       }}
     >
       {tabs.map((tab) => (
@@ -66,4 +66,6 @@ const BottomNav = () => {
 };
 
 export default BottomNav;
+
+
 

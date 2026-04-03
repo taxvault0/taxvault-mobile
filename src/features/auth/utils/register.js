@@ -343,3 +343,5 @@ export const buildRegisterPayload = (formData) => {
     termsAcceptedAt: new Date().toISOString(),
   };
 };
+
+

@@ -1,11 +1,12 @@
 import React from 'react';
+import { useTheme } from '@/core/providers/ThemeContext'; from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Card from './Card';
-import { colors } from '@/styles/theme';
-import { typography } from '@/styles/theme';
-import { spacing } from '@/styles/theme';
+import { colors, borderRadius } from '@/styles/theme';
+import { typography, borderRadius } from '@/styles/theme';
+import { spacing, borderRadius } from '@/styles/theme';
 
 const StatsCard = ({
   title,
@@ -62,7 +63,7 @@ const StatsCard = ({
           left: 0,
           right: 0,
           bottom: 0,
-          borderRadius: spacing.radius.lg,
+          borderRadius: borderRadius.lg,
         }}
       />
       <View style={{ position: 'relative' }}>
@@ -111,4 +112,13 @@ const StatsCard = ({
 };
 
 export default StatsCard;
+
+
+
+
+
+
+
+
+
 

@@ -43,7 +43,7 @@ const ReceiptItem = ({ receipt, onPress }) => {
         backgroundColor: colors.white,
         borderRadius: spacing.radius.md,
         marginBottom: spacing.sm,
-        ...spacing.shadows.sm,
+        ...shadows.sm,
       }}
     >
       <View
@@ -82,4 +82,6 @@ const ReceiptItem = ({ receipt, onPress }) => {
 };
 
 export default ReceiptItem;
+
+
 

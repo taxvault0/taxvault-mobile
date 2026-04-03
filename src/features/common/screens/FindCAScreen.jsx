@@ -338,7 +338,7 @@ const FindCAScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header title="Find a CA" />
 
       <View style={{ padding: spacing.lg }}>
@@ -480,4 +480,6 @@ const FindCAScreen = ({ navigation }) => {
 };
 
 export default FindCAScreen;
+
+
 

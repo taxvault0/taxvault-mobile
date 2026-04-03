@@ -142,3 +142,5 @@ export const buildChecklistSummary = (sections = [], uploadedDocuments = [], pro
 };
 
 export default evaluateUploadSectionStatus;
+
+

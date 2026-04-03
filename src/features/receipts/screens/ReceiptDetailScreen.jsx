@@ -147,7 +147,7 @@ const ReceiptDetailScreen = () => {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header 
         title="Receipt Details" 
         showBack 
@@ -171,7 +171,7 @@ const ReceiptDetailScreen = () => {
               backgroundColor: colors.white,
               borderRadius: spacing.radius.full,
               padding: spacing.sm,
-              ...spacing.shadows.md,
+              ...shadows.md,
             }}
             onPress={() => navigation.navigate('Camera', { imageUri: receipt.imageUrl })}
           >
@@ -563,6 +563,8 @@ const ReceiptDetailScreen = () => {
 };
 
 export default ReceiptDetailScreen;
+
+
 
 
 

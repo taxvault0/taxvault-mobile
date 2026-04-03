@@ -2,11 +2,11 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import DashboardScreen from '@/features/dashboard/screens/DashboardScreen';
-import DocumentsScreen from '@/features/documents/screens/DocumentsScreen';
-import ChecklistScreen from '@/features/checklist/screens/ChecklistScreen';
-import TaxSummaryScreen from '@/features/summary/screens/TaxSummaryScreen';
-import ProfileScreen from '@/features/profile/screens/ProfileScreen';
+import HomeStackNavigator from './HomeStackNavigator';
+import DocumentsStackNavigator from './DocumentsStackNavigator';
+import ChecklistStackNavigator from './ChecklistStackNavigator';
+import SummaryStackNavigator from './SummaryStackNavigator';
+import ProfileStackNavigator from './ProfileStackNavigator';
 import { colors } from '@/styles/theme';
 
 const Tab = createBottomTabNavigator();
@@ -73,41 +73,11 @@ const MainTabNavigator = () => {
         ),
       })}
     >
-      <Tab.Screen
-        name="Home"
-        component={DashboardScreen}
-        options={{
-          tabBarLabel: 'Home',
-        }}
-      />
-      <Tab.Screen
-        name="Documents"
-        component={DocumentsScreen}
-        options={{
-          tabBarLabel: 'Documents',
-        }}
-      />
-      <Tab.Screen
-        name="Checklist"
-        component={ChecklistScreen}
-        options={{
-          tabBarLabel: 'Checklist',
-        }}
-      />
-      <Tab.Screen
-        name="Summary"
-        component={TaxSummaryScreen}
-        options={{
-          tabBarLabel: 'Summary',
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarLabel: 'Profile',
-        }}
-      />
+      <Tab.Screen name="Home" component={HomeStackNavigator} />
+      <Tab.Screen name="Documents" component={DocumentsStackNavigator} />
+      <Tab.Screen name="Checklist" component={ChecklistStackNavigator} />
+      <Tab.Screen name="Summary" component={SummaryStackNavigator} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
 };

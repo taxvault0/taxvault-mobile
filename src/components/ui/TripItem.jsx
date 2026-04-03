@@ -27,7 +27,7 @@ const TripItem = ({ trip, onPress }) => {
         backgroundColor: colors.white,
         borderRadius: spacing.radius.md,
         marginBottom: spacing.sm,
-        ...spacing.shadows.sm,
+        ...shadows.sm,
       }}
     >
       <View
@@ -66,4 +66,6 @@ const TripItem = ({ trip, onPress }) => {
 };
 
 export default TripItem;
+
+
 

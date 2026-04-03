@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, {  useState  } from 'react';
+import { useTheme } from '@/core/providers/ThemeContext';
 import {
   View,
   Text,
@@ -13,9 +14,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as Clipboard from 'expo-clipboard';
 import Card from './Card';
 import Button from './Button';
-import { colors } from '@/styles/theme';
-import { typography } from '@/styles/theme';
-import { spacing } from '@/styles/theme';
+import { colors, borderRadius } from '@/styles/theme';
+import { typography, borderRadius } from '@/styles/theme';
+import { spacing, borderRadius } from '@/styles/theme';
 
 const ClientIDCard = ({ clientId, userName, showQR = true }) => {
   const [copied, setCopied] = useState(false);
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: colors.white,
     padding: spacing.xl,
-    borderRadius: spacing.radius.lg,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     maxWidth: '80%',
   },
@@ -205,4 +206,13 @@ const styles = StyleSheet.create({
 });
 
 export default ClientIDCard;
+
+
+
+
+
+
+
+
+
 

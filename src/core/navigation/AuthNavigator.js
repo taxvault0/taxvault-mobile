@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 import RoleSelectionScreen from '@/features/auth/screens/RoleSelectionScreen';
 import LoginScreen from '@/features/auth/screens/LoginScreen';
-import RegisterScreen from '@/features/auth/screens/RegisterScreen';
+import RegisterScreen from '@/features/auth/screens/register/RegisterScreen';
 import LoginScreenCA from '@/features/auth/screens/LoginScreenCA';
 import RegisterScreenCA from '@/features/auth/screens/RegisterScreenCA';
 import ForgotPasswordScreen from '@/features/auth/screens/ForgotPasswordScreen';
@@ -29,3 +29,5 @@ const AuthNavigator = () => {
 };
 
 export default AuthNavigator;
+
+

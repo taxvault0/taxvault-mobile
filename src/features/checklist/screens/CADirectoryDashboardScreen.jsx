@@ -79,7 +79,7 @@ const CADirectoryDashboardScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header title="CA Directory" />
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
@@ -246,4 +246,6 @@ const CADirectoryDashboardScreen = () => {
 };
 
 export default CADirectoryDashboardScreen;
+
+
 

@@ -33,3 +33,5 @@ const Badge = ({ status = 'info', text }) => {
 };
 
 export default Badge;
+
+

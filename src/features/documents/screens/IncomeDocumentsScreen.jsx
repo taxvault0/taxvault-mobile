@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, {  useState  } from 'react';
+import { useTheme } from '@/core/providers/ThemeContext';
 import {
   View,
   Text,
@@ -379,6 +380,15 @@ const styles = StyleSheet.create({
 });
 
 export default IncomeDocumentsScreen;
+
+
+
+
+
+
+
+
+
 
 
 
