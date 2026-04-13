@@ -1,5 +1,8 @@
-export const API_URL = process.env.API_URL || 'http://localhost:5000/api';
-export const SOCKET_URL = process.env.SOCKET_URL || 'http://localhost:5000';
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.100:5000/api';
+
+export const SOCKET_URL =
+  process.env.EXPO_PUBLIC_SOCKET_URL || 'http://192.168.1.100:5000';
 
 export const TAX_YEARS = [2025, 2024, 2023, 2022, 2021, 2020];
 
